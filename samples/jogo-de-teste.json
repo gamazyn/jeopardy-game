@@ -1,0 +1,244 @@
+{
+  "id": "00000000-0000-0000-0000-000000000001",
+  "version": 1,
+  "name": "Jogo de Teste",
+  "description": "Jogo de exemplo para testar o app. Categorias variadas com 5 questões cada.",
+  "defaultTimer": 60,
+  "finalChallengeEnabled": true,
+  "finalChallengeClue": "Este país tem mais de 200 milhões de habitantes e é o maior da América do Sul.",
+  "finalChallengeAnswer": "O que é o Brasil?",
+  "createdAt": "2026-04-16T00:00:00.000Z",
+  "updatedAt": "2026-04-16T00:00:00.000Z",
+  "categories": [
+    {
+      "id": "cat-geo-01",
+      "name": "Geografia",
+      "questions": [
+        {
+          "id": "q-geo-01",
+          "value": 100,
+          "clue": "Capital do Brasil.",
+          "answer": "O que é Brasília?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-geo-02",
+          "value": 200,
+          "clue": "O maior país do mundo em área territorial.",
+          "answer": "O que é a Rússia?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-geo-03",
+          "value": 300,
+          "clue": "O rio mais longo do mundo.",
+          "answer": "O que é o Nilo?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-geo-04",
+          "value": 400,
+          "clue": "Continente onde fica o Egito.",
+          "answer": "O que é a África?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-geo-05",
+          "value": 500,
+          "clue": "A montanha mais alta do mundo.",
+          "answer": "O que é o Monte Everest?",
+          "type": "standard",
+          "used": false
+        }
+      ]
+    },
+    {
+      "id": "cat-cie-01",
+      "name": "Ciência",
+      "questions": [
+        {
+          "id": "q-cie-01",
+          "value": 100,
+          "clue": "O planeta mais próximo do Sol.",
+          "answer": "O que é Mercúrio?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-cie-02",
+          "value": 200,
+          "clue": "O elemento químico de símbolo H₂O.",
+          "answer": "O que é a água?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-cie-03",
+          "value": 300,
+          "clue": "A velocidade da luz no vácuo é aproximadamente 300.000 ___ por segundo.",
+          "answer": "O que são quilômetros?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-cie-04",
+          "value": 400,
+          "clue": "Cientista que formulou a Teoria da Relatividade.",
+          "answer": "Quem é Albert Einstein?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-cie-05",
+          "value": 500,
+          "clue": "O número atômico do ouro na tabela periódica.",
+          "answer": "O que é 79?",
+          "type": "standard",
+          "used": false
+        }
+      ]
+    },
+    {
+      "id": "cat-pop-01",
+      "name": "Cultura Pop",
+      "questions": [
+        {
+          "id": "q-pop-01",
+          "value": 100,
+          "clue": "A frase 'Que a Força esteja com você' é de qual franquia?",
+          "answer": "O que é Star Wars?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-pop-02",
+          "value": 200,
+          "clue": "Personagem que vive na Rua Sésamo e adora cookies.",
+          "answer": "Quem é o Monstro das Cookies?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-pop-03",
+          "value": 300,
+          "clue": "Banda britânica formada por John, Paul, George e Ringo.",
+          "answer": "Quem são The Beatles?",
+          "type": "all_play",
+          "used": false
+        },
+        {
+          "id": "q-pop-04",
+          "value": 400,
+          "clue": "Ele é o bruxinho de Hogwarts com uma cicatriz em forma de raio.",
+          "answer": "Quem é Harry Potter?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-pop-05",
+          "value": 500,
+          "clue": "Diretor de Pulp Fiction e Kill Bill.",
+          "answer": "Quem é Quentin Tarantino?",
+          "type": "standard",
+          "used": false
+        }
+      ]
+    },
+    {
+      "id": "cat-his-01",
+      "name": "História",
+      "questions": [
+        {
+          "id": "q-his-01",
+          "value": 100,
+          "clue": "Ano da Independência do Brasil.",
+          "answer": "O que é 1822?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-his-02",
+          "value": 200,
+          "clue": "Imperador francês que foi exilado na ilha de Santa Helena.",
+          "answer": "Quem é Napoleão Bonaparte?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-his-03",
+          "value": 300,
+          "clue": "A Primeira Guerra Mundial começou neste ano.",
+          "answer": "O que é 1914?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-his-04",
+          "value": 400,
+          "clue": "Civilização que construiu as pirâmides de Gizé.",
+          "answer": "O que são os Egípcios Antigos?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-his-05",
+          "value": 500,
+          "clue": "Muro que dividia Berlim Oriental e Ocidental, derrubado em 1989.",
+          "answer": "O que é o Muro de Berlim?",
+          "type": "challenge",
+          "used": false
+        }
+      ]
+    },
+    {
+      "id": "cat-esp-01",
+      "name": "Esportes",
+      "questions": [
+        {
+          "id": "q-esp-01",
+          "value": 100,
+          "clue": "Modalidade olímpica onde se nada, pedala e corre.",
+          "answer": "O que é Triathlon?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-esp-02",
+          "value": 200,
+          "clue": "País com mais títulos na Copa do Mundo de Futebol.",
+          "answer": "O que é o Brasil?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-esp-03",
+          "value": 300,
+          "clue": "Número de jogadores em um time de basquete em quadra.",
+          "answer": "O que é 5?",
+          "type": "standard",
+          "used": false
+        },
+        {
+          "id": "q-esp-04",
+          "value": 400,
+          "clue": "Atleta brasileiro tetracampeão mundial de Fórmula 1.",
+          "answer": "Quem é Ayrton Senna?",
+          "type": "all_play",
+          "used": false
+        },
+        {
+          "id": "q-esp-05",
+          "value": 500,
+          "clue": "Torneio de tênis jogado na grama de Wimbledon, Inglaterra.",
+          "answer": "O que é o Campeonato de Wimbledon?",
+          "type": "standard",
+          "used": false
+        }
+      ]
+    }
+  ]
+}
