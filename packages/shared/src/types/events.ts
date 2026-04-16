@@ -163,8 +163,25 @@ export interface S2C_FinalChallengeStarted {
   wagerDeadlineMs: number;
 }
 
+// Enviado a TODOS quando um player submete aposta (sem valores)
 export interface S2C_FinalWagerConfirmed {
   playerId: string;
+  playerName: string;
+  totalSubmitted: number;
+  totalPlayers: number;
+}
+
+// Enviado APENAS ao host com os detalhes da aposta
+export interface S2C_FinalHostWagerReceived {
+  playerId: string;
+  playerName: string;
+  amount: number;
+  answer: string;
+}
+
+// Enviado APENAS ao host ao iniciar o Desafio Final
+export interface S2C_FinalHostDetails {
+  correctAnswer: string;
 }
 
 export interface S2C_FinalRevealed {
@@ -202,6 +219,8 @@ export interface ServerToClientEvents {
   'timer:update': (data: S2C_TimerUpdate) => void;
   'final:started': (data: S2C_FinalChallengeStarted) => void;
   'final:wagerConfirmed': (data: S2C_FinalWagerConfirmed) => void;
+  'final:hostWagerReceived': (data: S2C_FinalHostWagerReceived) => void;
+  'final:hostDetails': (data: S2C_FinalHostDetails) => void;
   'final:revealed': (data: S2C_FinalRevealed) => void;
   'game:over': (data: S2C_GameOver) => void;
 }

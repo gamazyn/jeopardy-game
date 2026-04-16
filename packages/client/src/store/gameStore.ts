@@ -5,13 +5,24 @@ import type {
   GamePhase,
   ActiveQuestion,
   BuzzerEntry,
-  FinalChallengeWager,
 } from '@jeopardy/shared';
 
 interface TimerState {
   remainingMs: number;
   totalMs: number;
   isPaused: boolean;
+}
+
+interface HostWager {
+  playerId: string;
+  playerName: string;
+  amount: number;
+  answer: string;
+}
+
+interface WagerStatus {
+  playerId: string;
+  playerName: string;
 }
 
 interface GameState {
@@ -29,24 +40,31 @@ interface GameState {
   buzzerQueue: BuzzerEntry[];
   timer: TimerState | null;
 
-  // Desafio Final
+  // Desafio Final — compartilhado
   finalClue: string | null;
   finalMedia: GameConfig['finalChallengeMedia'] | null;
-  finalWagers: Record<string, FinalChallengeWager>;
   myWagerSent: boolean;
+  wagersSubmitted: WagerStatus[];           // quem já apostou (todos veem)
+
+  // Desafio Final — somente host
+  finalCorrectAnswer: string | null;
+  hostWagers: Record<string, HostWager>;    // detalhes das apostas (só host recebe)
+  revealedWagers: Record<string, boolean>;  // quais jogadores já foram revelados
 
   // Ações
   setSession: (sessionId: string, hostToken: string | null, tunnelUrl: string | null, isHost: boolean) => void;
   setGameStarted: (config: Omit<GameConfig, 'finalChallengeAnswer'>, players: Player[]) => void;
   setPhase: (phase: GamePhase) => void;
   setPlayers: (players: Player[]) => void;
-  addPlayer: (player: Player) => void;
-  setPlayerDisconnected: (playerId: string) => void;
   setActiveQuestion: (q: ActiveQuestion | null) => void;
   setBuzzerQueue: (queue: BuzzerEntry[]) => void;
   setTimer: (timer: TimerState | null) => void;
   markQuestionUsed: (categoryId: string, questionId: string) => void;
   setFinalChallenge: (clue: string, media?: GameConfig['finalChallengeMedia']) => void;
+  setFinalCorrectAnswer: (answer: string) => void;
+  addWagerSubmitted: (playerId: string, playerName: string) => void;
+  addHostWager: (wager: HostWager) => void;
+  markWagerRevealed: (playerId: string) => void;
   setMyWagerSent: () => void;
   reset: () => void;
 }
@@ -64,8 +82,11 @@ const initialState = {
   timer: null,
   finalClue: null,
   finalMedia: null,
-  finalWagers: {},
   myWagerSent: false,
+  wagersSubmitted: [],
+  finalCorrectAnswer: null,
+  hostWagers: {},
+  revealedWagers: {},
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -80,14 +101,6 @@ export const useGameStore = create<GameState>((set) => ({
   setPhase: (phase) => set({ phase }),
 
   setPlayers: (players) => set({ players }),
-
-  addPlayer: (player) =>
-    set((s) => ({ players: [...s.players.filter((p) => p.id !== player.id), player] })),
-
-  setPlayerDisconnected: (playerId) =>
-    set((s) => ({
-      players: s.players.map((p) => (p.id === playerId ? { ...p, isConnected: false } : p)),
-    })),
 
   setActiveQuestion: (activeQuestion) => set({ activeQuestion }),
 
@@ -115,7 +128,23 @@ export const useGameStore = create<GameState>((set) => ({
       };
     }),
 
-  setFinalChallenge: (finalClue, finalMedia) => set({ finalClue, finalMedia, phase: 'final_challenge' }),
+  setFinalChallenge: (finalClue, finalMedia) =>
+    set({ finalClue, finalMedia, phase: 'final_challenge' }),
+
+  setFinalCorrectAnswer: (finalCorrectAnswer) => set({ finalCorrectAnswer }),
+
+  addWagerSubmitted: (playerId, playerName) =>
+    set((s) => ({
+      wagersSubmitted: s.wagersSubmitted.some((w) => w.playerId === playerId)
+        ? s.wagersSubmitted
+        : [...s.wagersSubmitted, { playerId, playerName }],
+    })),
+
+  addHostWager: (wager) =>
+    set((s) => ({ hostWagers: { ...s.hostWagers, [wager.playerId]: wager } })),
+
+  markWagerRevealed: (playerId) =>
+    set((s) => ({ revealedWagers: { ...s.revealedWagers, [playerId]: true } })),
 
   setMyWagerSent: () => set({ myWagerSent: true }),
 

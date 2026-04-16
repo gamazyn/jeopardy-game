@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --jeopardy-blue: #0600C8;
-    --jeopardy-gold: #FFD700;
+    --jeopardy-blue: #0F172A;
+    --jeopardy-gold: #E8B84B;
   }
 
   body {
@@ -31,7 +31,7 @@
   }
 
   .card {
-    @apply bg-jeopardy-blue-light border-2 border-jeopardy-gold rounded-xl p-6;
+    @apply bg-jeopardy-blue-light border border-slate-700 rounded-xl p-6;
   }
 
   .question-cell {

@@ -25,12 +25,12 @@ export function LobbyView() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <h2 className="text-blue-200 text-lg mb-2">Código da Sala</h2>
+          <h2 className="text-slate-300 text-lg mb-2">Código da Sala</h2>
           <div className="text-6xl font-bold text-jeopardy-gold tracking-widest border-4 border-jeopardy-gold rounded-2xl py-4 px-8 inline-block">
             {sessionId}
           </div>
           {tunnelUrl && (
-            <p className="text-blue-300 text-sm mt-3 break-all">
+            <p className="text-slate-400 text-sm mt-3 break-all">
               Link remoto:{' '}
               <button
                 className="text-jeopardy-gold underline"
@@ -47,13 +47,13 @@ export function LobbyView() {
             Jogadores ({players.length})
           </h3>
           {players.length === 0 ? (
-            <p className="text-blue-300 text-center py-4">Aguardando jogadores...</p>
+            <p className="text-slate-400 text-center py-4">Aguardando jogadores...</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {players.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center gap-3 py-2 border-b border-blue-700 last:border-0"
+                  className="flex items-center gap-3 py-2 border-b border-slate-600 last:border-0"
                 >
                   <div
                     className="w-4 h-4 rounded-full flex-shrink-0"
@@ -80,7 +80,7 @@ export function LobbyView() {
         )}
 
         {!isHost && (
-          <p className="text-center text-blue-300">Aguardando o host iniciar o jogo...</p>
+          <p className="text-center text-slate-400">Aguardando o host iniciar o jogo...</p>
         )}
       </div>
     </div>

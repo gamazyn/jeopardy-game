@@ -22,7 +22,7 @@ export function Scoreboard({ players, myId }: Props) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className={`flex items-center gap-2 py-2 px-3 rounded-lg ${
-              player.id === myId ? 'bg-jeopardy-gold/20 border border-jeopardy-gold' : 'bg-blue-900/40'
+              player.id === myId ? 'bg-jeopardy-gold/20 border border-jeopardy-gold' : 'bg-slate-800/40'
             }`}
           >
             <div

@@ -6,10 +6,10 @@ export default {
     extend: {
       colors: {
         jeopardy: {
-          blue: '#0600C8',
-          'blue-light': '#1A0FD4',
-          gold: '#FFD700',
-          'gold-dark': '#CC9900',
+          blue: '#0F172A',
+          'blue-light': '#1E2D40',
+          gold: '#E8B84B',
+          'gold-dark': '#C59830',
         },
       },
       fontFamily: {

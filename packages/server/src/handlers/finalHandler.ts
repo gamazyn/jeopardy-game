@@ -3,6 +3,7 @@ import type { ServerToClientEvents, ClientToServerEvents } from '@jeopardy/share
 import { sanitizeAnswer } from '@jeopardy/shared';
 import { getSession, updateSession } from '../managers/sessionManager.js';
 import { validateHostToken } from '../middleware/authMiddleware.js';
+import { canTransition } from '../managers/gameStateManager.js';
 
 function requireHost(
   socket: Socket,
@@ -21,10 +22,44 @@ function requireHost(
   return session;
 }
 
+/** Emite os eventos de início do Desafio Final para todos + detalhes ao host */
+export function emitFinalChallengeStart(
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  sessionId: string,
+): void {
+  const session = getSession(sessionId);
+  if (!session) return;
+
+  io.to(`session:${sessionId}`).emit('final:started', {
+    clue: session.gameConfig.finalChallengeClue,
+    media: session.gameConfig.finalChallengeMedia,
+    wagerDeadlineMs: 60_000,
+  });
+
+  // Envia a resposta correta apenas ao host
+  io.to(`host:${sessionId}`).emit('final:hostDetails', {
+    correctAnswer: session.gameConfig.finalChallengeAnswer,
+  });
+}
+
 export function registerFinalHandlers(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
 ): void {
+  // HOST: iniciar Desafio Final manualmente (quando botão clicado antes de todas as questões)
+  socket.on('host:startFinal', (payload) => {
+    const session = requireHost(socket, payload.sessionId, payload.hostToken);
+    if (!session) return;
+
+    if (!canTransition(session.phase, 'final_challenge')) {
+      socket.emit('error', { code: 'INVALID_TRANSITION', message: 'Não é possível iniciar o Desafio Final agora.' });
+      return;
+    }
+
+    updateSession(payload.sessionId, { phase: 'final_challenge' });
+    emitFinalChallengeStart(io, payload.sessionId);
+  });
+
   // PLAYER: enviar aposta do Desafio Final
   socket.on('player:finalWager', (payload) => {
     const session = getSession(payload.sessionId);
@@ -33,31 +68,40 @@ export function registerFinalHandlers(
     const player = session.players[socket.id];
     if (!player) return;
 
-    // Validar aposta
+    // Não permitir re-envio
+    if (session.finalChallengeWagers[socket.id]) return;
+
     const amount = Math.max(0, Math.min(payload.amount, Math.max(player.score, 0)));
     const answer = sanitizeAnswer(payload.answer);
 
     const updatedWagers = {
       ...session.finalChallengeWagers,
-      [socket.id]: {
-        playerId: socket.id,
-        amount,
-        answer,
-        revealed: false,
-      },
+      [socket.id]: { playerId: socket.id, amount, answer, revealed: false },
     };
 
     updateSession(payload.sessionId, { finalChallengeWagers: updatedWagers });
 
-    // Confirmar apenas para o player
-    socket.emit('final:wagerConfirmed', { playerId: socket.id });
+    const totalPlayers = Object.keys(session.players).length;
+    const totalSubmitted = Object.keys(updatedWagers).length;
 
-    // Notificar host que alguém apostou (sem revelar valores)
-    const playerCount = Object.keys(session.players).length;
-    const wagerCount = Object.keys(updatedWagers).length;
+    // Confirma para TODOS (sem valores) — host e players sabem quem enviou
+    io.to(`session:${payload.sessionId}`).emit('final:wagerConfirmed', {
+      playerId: socket.id,
+      playerName: player.name,
+      totalSubmitted,
+      totalPlayers,
+    });
 
-    // Se todos apostaram, mover para reveal
-    if (wagerCount >= playerCount) {
+    // Envia detalhes da aposta APENAS ao host
+    io.to(`host:${payload.sessionId}`).emit('final:hostWagerReceived', {
+      playerId: socket.id,
+      playerName: player.name,
+      amount,
+      answer,
+    });
+
+    // Se todos apostaram, mover para fase de revelação
+    if (totalSubmitted >= totalPlayers) {
       updateSession(payload.sessionId, { phase: 'final_reveal' });
     }
   });
@@ -79,7 +123,6 @@ export function registerFinalHandlers(
     const oldScore = player.score;
     const newScore = oldScore + scoreChange;
 
-    // Atualizar score e marcar como revelado
     const updatedPlayers = { ...session.players };
     updatedPlayers[payload.playerId] = { ...player, score: newScore };
 
@@ -106,7 +149,6 @@ export function registerFinalHandlers(
       players: Object.values(updatedPlayers),
     });
 
-    // Verificar se todos foram revelados
     const allRevealed = Object.values(updatedWagers).every((w) => w.revealed);
     if (allRevealed) {
       const players = Object.values(updatedPlayers).sort((a, b) => b.score - a.score);
