@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --jeopardy-blue: #0600C8;
+    --jeopardy-gold: #FFD700;
+  }
+
+  body {
+    @apply bg-jeopardy-blue text-white font-display;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-jeopardy-gold text-jeopardy-blue font-bold py-3 px-6 rounded-lg
+           hover:bg-jeopardy-gold-dark transition-colors duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply border-2 border-jeopardy-gold text-jeopardy-gold font-bold py-3 px-6 rounded-lg
+           hover:bg-jeopardy-gold hover:text-jeopardy-blue transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-jeopardy-blue-light border-2 border-jeopardy-gold rounded-xl p-6;
+  }
+
+  .question-cell {
+    @apply bg-jeopardy-blue border-4 border-jeopardy-blue-light flex items-center justify-center
+           cursor-pointer hover:bg-jeopardy-blue-light transition-colors duration-200
+           font-bold text-jeopardy-gold text-2xl select-none;
+  }
+
+  .question-cell.used {
+    @apply bg-gray-900 border-gray-800 cursor-default text-gray-700;
+  }
+}
