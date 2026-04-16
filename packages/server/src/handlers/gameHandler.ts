@@ -3,6 +3,7 @@ import type { ServerToClientEvents, ClientToServerEvents, GameConfig } from '@je
 import { getSession, updateSession } from '../managers/sessionManager.js';
 import { validateHostToken } from '../middleware/authMiddleware.js';
 import { canTransition, allQuestionsUsed } from '../managers/gameStateManager.js';
+import { emitFinalChallengeStart } from './finalHandler.js';
 import { startTimer, stopTimer, pauseTimer, resumeTimer, extendTimer, setTimer } from '../managers/timerManager.js';
 import { DEFAULT_TIMER_MS } from '../config.js';
 
@@ -211,10 +212,6 @@ export function closeQuestion(
   });
 
   if (nextPhase === 'final_challenge') {
-    io.to(`session:${sessionId}`).emit('final:started', {
-      clue: updatedConfig.finalChallengeClue,
-      media: updatedConfig.finalChallengeMedia,
-      wagerDeadlineMs: 60_000,
-    });
+    emitFinalChallengeStart(io, sessionId);
   }
 }

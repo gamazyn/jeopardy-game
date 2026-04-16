@@ -56,7 +56,7 @@ export function HostSetupView() {
         <h1 className="text-4xl font-bold text-jeopardy-gold mb-8 text-center">Hospedar Jogo</h1>
 
         {games.length === 0 ? (
-          <div className="card text-center text-blue-200">
+          <div className="card text-center text-slate-300">
             <p className="mb-4">Nenhum jogo salvo. Crie um primeiro!</p>
             <button className="btn-primary" onClick={() => navigate('/editor')}>
               Criar Jogo
@@ -71,12 +71,12 @@ export function HostSetupView() {
                 className={`card text-left transition-all ${
                   selected === g.id
                     ? 'border-jeopardy-gold bg-jeopardy-blue-light'
-                    : 'border-blue-600 hover:border-blue-400'
+                    : 'border-slate-600 hover:border-slate-500'
                 }`}
               >
                 <div className="font-bold text-lg">{g.name}</div>
-                {g.description && <div className="text-blue-300 text-sm mt-1">{g.description}</div>}
-                <div className="text-blue-500 text-xs mt-2">
+                {g.description && <div className="text-slate-400 text-sm mt-1">{g.description}</div>}
+                <div className="text-slate-500 text-xs mt-2">
                   Atualizado: {new Date(g.updatedAt).toLocaleDateString('pt-BR')}
                 </div>
               </button>

@@ -21,7 +21,7 @@ export function QuestionTimer({ remainingMs, totalMs, isPaused }: Props) {
       >
         {seconds}
       </div>
-      <div className="w-full h-3 bg-blue-900 rounded-full overflow-hidden">
+      <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
         <motion.div
           className="h-full rounded-full"
           style={{ backgroundColor: color }}

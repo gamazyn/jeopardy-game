@@ -17,7 +17,7 @@ export function GameBoard({ categories, onSelectQuestion, activeQuestionId }: Pr
       {categories.map((cat) => (
         <div
           key={cat.id}
-          className="bg-jeopardy-blue-light border-4 border-blue-900 flex items-center justify-center text-center p-3 min-h-[80px]"
+          className="bg-jeopardy-blue-light border-4 border-slate-800 flex items-center justify-center text-center p-3 min-h-[80px]"
         >
           {cat.media ? (
             <img src={`/media/${cat.media.filename}`} alt={cat.name} className="max-h-16 object-contain" />

@@ -8,13 +8,13 @@ export function useSocketEvents() {
   const { setMyId, setBuzzerPosition } = usePlayerStore();
 
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) socket.connect();
 
     socket.on('connect', () => {
       setMyId(socket.id ?? '');
     });
 
-    socket.on('player:joined', ({ player, allPlayers }) => {
+    socket.on('player:joined', ({ allPlayers }) => {
       store.setPlayers(allPlayers);
     });
 
@@ -40,9 +40,7 @@ export function useSocketEvents() {
       setBuzzerPosition(null);
     });
 
-    socket.on('buzzer:opened', () => {
-      // Abrir buzzer para interação
-    });
+    socket.on('buzzer:opened', () => {});
 
     socket.on('buzzer:confirmed', ({ position }) => {
       setBuzzerPosition(position);
@@ -67,13 +65,30 @@ export function useSocketEvents() {
         totalMs,
         isPaused: action === 'pause',
       });
-      if (action === 'expired') {
-        store.setTimer(null);
-      }
+      if (action === 'expired') store.setTimer(null);
     });
 
     socket.on('final:started', ({ clue, media }) => {
       store.setFinalChallenge(clue, media);
+    });
+
+    // Somente o host recebe este evento (server emite para host:sessionId)
+    socket.on('final:hostDetails', ({ correctAnswer }) => {
+      store.setFinalCorrectAnswer(correctAnswer);
+    });
+
+    // Quando alguém aposta — todos recebem (sem valores)
+    socket.on('final:wagerConfirmed', ({ playerId, playerName, totalSubmitted, totalPlayers }) => {
+      store.addWagerSubmitted(playerId, playerName);
+      // Se todos apostaram, transitar para fase de revelação
+      if (totalSubmitted >= totalPlayers && totalPlayers > 0) {
+        store.setPhase('final_reveal');
+      }
+    });
+
+    // Somente o host recebe os detalhes da aposta
+    socket.on('final:hostWagerReceived', (wager) => {
+      store.addHostWager(wager);
     });
 
     socket.on('final:revealed', ({ playerId, newScore }) => {
@@ -82,6 +97,7 @@ export function useSocketEvents() {
           p.id === playerId ? { ...p, score: newScore } : p,
         ),
       );
+      store.markWagerRevealed(playerId);
     });
 
     socket.on('game:over', ({ finalScores }) => {
@@ -107,10 +123,13 @@ export function useSocketEvents() {
       socket.off('score:update');
       socket.off('timer:update');
       socket.off('final:started');
+      socket.off('final:hostDetails');
+      socket.off('final:wagerConfirmed');
+      socket.off('final:hostWagerReceived');
       socket.off('final:revealed');
       socket.off('game:over');
       socket.off('error');
-      socket.disconnect();
+      // Não desconecta — conexão persiste durante toda a sessão de jogo
     };
   }, []);
 }

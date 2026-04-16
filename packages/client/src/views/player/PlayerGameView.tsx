@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socket } from '../../socket.js';
 import { useGameStore } from '../../store/gameStore.js';
@@ -11,6 +11,7 @@ import { QuestionTimer } from '../../components/question/QuestionTimer.js';
 
 export function PlayerGameView() {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
   const {
     gameConfig,
     players,
@@ -41,7 +42,34 @@ export function PlayerGameView() {
     setMyWagerSent();
   }
 
-  if (!gameConfig) return null;
+  if (!gameConfig) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-6">
+        <h1 className="text-5xl font-bold text-jeopardy-gold tracking-wider">JEOPARDY!</h1>
+        <div className="card text-center max-w-sm w-full">
+          <div className="text-4xl mb-4">⏳</div>
+          <p className="text-lg font-bold mb-1">{myName}</p>
+          <p className="text-slate-400 text-sm">Aguardando o host iniciar o quiz...</p>
+        </div>
+        {players.length > 0 && (
+          <div className="card max-w-sm w-full">
+            <h3 className="text-jeopardy-gold font-bold text-sm uppercase tracking-wider mb-3">
+              Jogadores na sala ({players.length})
+            </h3>
+            <ul className="flex flex-col gap-2">
+              {players.map((p) => (
+                <li key={p.id} className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.avatarColor }} />
+                  <span className="text-sm">{p.name}</span>
+                  {p.id === myId && <span className="text-jeopardy-gold text-xs ml-auto">você</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const canBuzz = (phase === 'question' || phase === 'all_play') && !buzzerPosition;
 
@@ -50,12 +78,12 @@ export function PlayerGameView() {
       {/* Header com meu score */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-blue-200 text-sm">{myName}</div>
+          <div className="text-slate-300 text-sm">{myName}</div>
           <div className={`text-3xl font-bold ${(myPlayer?.score ?? 0) < 0 ? 'text-red-400' : 'text-jeopardy-gold'}`}>
             ${(myPlayer?.score ?? 0).toLocaleString('pt-BR')}
           </div>
         </div>
-        <div className="text-blue-300 text-sm">{gameConfig.name}</div>
+        <div className="text-slate-400 text-sm">{gameConfig.name}</div>
       </div>
 
       {/* Board (somente leitura) */}
@@ -149,7 +177,7 @@ export function PlayerGameView() {
           {!myWagerSent ? (
             <form onSubmit={submitWager} className="flex flex-col gap-4 w-full max-w-md">
               <div>
-                <label className="text-blue-200 text-sm mb-1 block">
+                <label className="text-slate-300 text-sm mb-1 block">
                   Quanto você aposta? (máx: ${Math.max(myPlayer?.score ?? 0, 0)})
                 </label>
                 <input
@@ -163,13 +191,13 @@ export function PlayerGameView() {
                 />
               </div>
               <div>
-                <label className="text-blue-200 text-sm mb-1 block">Sua resposta</label>
+                <label className="text-slate-300 text-sm mb-1 block">Sua resposta</label>
                 <input
                   type="text"
                   value={wagerAnswer}
                   onChange={(e) => setWagerAnswer(e.target.value)}
                   maxLength={500}
-                  className="w-full bg-jeopardy-blue-light border-2 border-blue-400 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-jeopardy-gold"
+                  className="w-full bg-jeopardy-blue-light border-2 border-slate-500 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-jeopardy-gold"
                   placeholder="O que é..."
                 />
               </div>
@@ -178,7 +206,7 @@ export function PlayerGameView() {
               </button>
             </form>
           ) : (
-            <div className="text-center text-blue-200">
+            <div className="text-center text-slate-300">
               <p className="text-xl mb-2">Aposta enviada!</p>
               <p>Aguardando o host revelar os resultados...</p>
             </div>
@@ -200,7 +228,7 @@ export function PlayerGameView() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1 }}
                   className={`flex items-center gap-3 p-3 rounded-xl ${
-                    i === 0 ? 'bg-jeopardy-gold text-jeopardy-blue' : 'bg-blue-900/50'
+                    i === 0 ? 'bg-jeopardy-gold text-jeopardy-blue' : 'bg-slate-800/50'
                   }`}
                 >
                   <span className="font-bold text-xl w-8">#{i + 1}</span>
@@ -213,6 +241,12 @@ export function PlayerGameView() {
                 </motion.div>
               ))}
           </div>
+          <button
+            className="btn-ghost mt-4"
+            onClick={() => { socket.disconnect(); navigate('/'); }}
+          >
+            ← Voltar ao Menu
+          </button>
         </div>
       )}
     </div>

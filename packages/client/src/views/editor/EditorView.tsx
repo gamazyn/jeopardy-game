@@ -148,7 +148,7 @@ export function EditorView() {
               className={`text-left py-2 px-3 rounded-lg text-sm truncate ${
                 selectedCat === i
                   ? 'bg-jeopardy-gold text-jeopardy-blue font-bold'
-                  : 'bg-blue-900/40 text-blue-200 hover:bg-blue-900'
+                  : 'bg-slate-800/40 text-slate-300 hover:bg-slate-800'
               }`}
             >
               {c.name || `Categoria ${i + 1}`}
@@ -166,7 +166,7 @@ export function EditorView() {
                 placeholder="Nome da categoria"
                 value={cat.name}
                 onChange={(e) => updateCategory(selectedCat, { name: e.target.value })}
-                className="flex-1 bg-jeopardy-blue-light border-2 border-blue-400 rounded-lg px-4 py-2 text-white text-lg font-bold focus:outline-none focus:border-jeopardy-gold"
+                className="flex-1 bg-jeopardy-blue-light border-2 border-slate-500 rounded-lg px-4 py-2 text-white text-lg font-bold focus:outline-none focus:border-jeopardy-gold"
               />
               {game.categories.length > 1 && (
                 <button
@@ -187,12 +187,12 @@ export function EditorView() {
                       type="number"
                       value={q.value}
                       onChange={(e) => updateQuestion(selectedCat, qi, { value: Number(e.target.value) })}
-                      className="w-24 bg-jeopardy-blue border border-blue-600 rounded px-2 py-1 text-jeopardy-gold font-bold text-center"
+                      className="w-24 bg-jeopardy-blue border border-slate-600 rounded px-2 py-1 text-jeopardy-gold font-bold text-center"
                     />
                     <select
                       value={q.type}
                       onChange={(e) => updateQuestion(selectedCat, qi, { type: e.target.value as Question['type'] })}
-                      className="bg-jeopardy-blue border border-blue-600 rounded px-2 py-1 text-blue-200 text-sm"
+                      className="bg-jeopardy-blue border border-slate-600 rounded px-2 py-1 text-slate-300 text-sm"
                     >
                       <option value="standard">Normal</option>
                       <option value="all_play">Todos Jogam</option>
@@ -208,7 +208,7 @@ export function EditorView() {
                           timeOverride: e.target.value ? Number(e.target.value) : undefined,
                         })
                       }
-                      className="w-24 bg-jeopardy-blue border border-blue-600 rounded px-2 py-1 text-blue-200 text-sm text-center"
+                      className="w-24 bg-jeopardy-blue border border-slate-600 rounded px-2 py-1 text-slate-300 text-sm text-center"
                     />
                   </div>
                   <textarea
@@ -216,14 +216,14 @@ export function EditorView() {
                     value={q.clue}
                     onChange={(e) => updateQuestion(selectedCat, qi, { clue: e.target.value })}
                     rows={2}
-                    className="w-full bg-jeopardy-blue border border-blue-600 rounded px-3 py-2 text-white resize-none focus:outline-none focus:border-jeopardy-gold"
+                    className="w-full bg-jeopardy-blue border border-slate-600 rounded px-3 py-2 text-white resize-none focus:outline-none focus:border-jeopardy-gold"
                   />
                   <input
                     type="text"
                     placeholder="Resposta (visível apenas ao host)"
                     value={q.answer}
                     onChange={(e) => updateQuestion(selectedCat, qi, { answer: e.target.value })}
-                    className="w-full bg-jeopardy-blue border border-blue-600 rounded px-3 py-2 text-blue-300 focus:outline-none focus:border-jeopardy-gold"
+                    className="w-full bg-jeopardy-blue border border-slate-600 rounded px-3 py-2 text-slate-400 focus:outline-none focus:border-jeopardy-gold"
                   />
                 </div>
               ))}
@@ -239,7 +239,7 @@ export function EditorView() {
                   onChange={(e) => setGame((g) => ({ ...g, finalChallengeEnabled: e.target.checked }))}
                   className="w-4 h-4"
                 />
-                <span className="text-blue-200">Habilitar Desafio Final</span>
+                <span className="text-slate-300">Habilitar Desafio Final</span>
               </label>
               {game.finalChallengeEnabled && (
                 <>
@@ -248,14 +248,14 @@ export function EditorView() {
                     value={game.finalChallengeClue}
                     onChange={(e) => setGame((g) => ({ ...g, finalChallengeClue: e.target.value }))}
                     rows={2}
-                    className="w-full bg-jeopardy-blue border border-blue-600 rounded px-3 py-2 text-white resize-none mb-2 focus:outline-none focus:border-jeopardy-gold"
+                    className="w-full bg-jeopardy-blue border border-slate-600 rounded px-3 py-2 text-white resize-none mb-2 focus:outline-none focus:border-jeopardy-gold"
                   />
                   <input
                     type="text"
                     placeholder="Resposta do Desafio Final"
                     value={game.finalChallengeAnswer}
                     onChange={(e) => setGame((g) => ({ ...g, finalChallengeAnswer: e.target.value }))}
-                    className="w-full bg-jeopardy-blue border border-blue-600 rounded px-3 py-2 text-blue-300 focus:outline-none focus:border-jeopardy-gold"
+                    className="w-full bg-jeopardy-blue border border-slate-600 rounded px-3 py-2 text-slate-400 focus:outline-none focus:border-jeopardy-gold"
                   />
                 </>
               )}
