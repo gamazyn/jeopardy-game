@@ -25,6 +25,16 @@ cd jeopardy-game
 pnpm install
 ```
 
+### Carregar jogo de teste
+
+Para testar rapidamente sem criar um jogo do zero:
+
+```bash
+pnpm seed
+```
+
+Isso importa o **Jogo de Teste** da pasta `samples/` para `data/games/`. O jogo contém 5 categorias (Geografia, Ciência, Cultura Pop, História, Esportes) com 5 questões cada, incluindo questões especiais como *Todos Jogam* e *Desafie um Jogador*.
+
 ## Rodando em desenvolvimento
 
 ```bash
@@ -91,7 +101,8 @@ jeopardy-game/
 | `pnpm dev` | Inicia server + client em modo dev |
 | `pnpm build` | Build de produção |
 | `pnpm type-check` | Checa tipos em todos os packages |
+| `pnpm seed` | Importa os jogos de exemplo de `samples/` para `data/` |
 
 ## Licença
 
-MIT
+[GPL-3.0](LICENSE)
