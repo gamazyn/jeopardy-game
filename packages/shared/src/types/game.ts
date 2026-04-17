@@ -12,7 +12,10 @@ export interface Question {
   clue: string;
   answer: string;
   type: QuestionType;
-  media?: MediaAsset;
+  media?: MediaAsset;      // imagem do clue
+  clueAudio?: MediaAsset;  // áudio do clue
+  answerMedia?: MediaAsset; // imagem da resposta
+  answerAudio?: MediaAsset; // áudio da resposta
   used: boolean;
   challengeTarget?: string;
   timeOverride?: number;

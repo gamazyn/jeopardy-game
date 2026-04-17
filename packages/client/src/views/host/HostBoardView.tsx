@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socket } from '../../socket.js';
@@ -16,11 +16,29 @@ export function HostBoardView() {
     gameConfig, players, phase, activeQuestion,
     buzzerQueue, timer, hostToken,
     finalClue, finalCorrectAnswer, wagersSubmitted, hostWagers, revealedWagers,
+    doublePlayerId, doublePlayerName, challengeState,
   } = useGameStore();
   useSocketEvents();
 
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Ignora null: evita que a exit animation do AnimatePresence sobrescreva o ref
+  // com null depois do novo overlay já ter registrado o elemento correto.
+  const audioCallbackRef = useCallback((el: HTMLAudioElement | null) => {
+    if (el !== null) audioRef.current = el;
+  }, []);
+
+  function emitAudio(action: 'play' | 'pause' | 'seek') {
+    if (!audioRef.current || !sessionId || !hostToken) return;
+    socket.emit('host:audioControl', {
+      sessionId,
+      hostToken,
+      action,
+      currentTime: audioRef.current.currentTime,
+    });
+  }
 
   if (!gameConfig || !sessionId || !hostToken) return null;
 
@@ -40,6 +58,15 @@ export function HostBoardView() {
   }
   function timerControl(action: 'pause' | 'resume' | 'extend' | 'set', seconds?: number) {
     socket.emit('host:timerControl', { sessionId: sessionId!, hostToken: hostToken!, action, seconds });
+  }
+  function continueBoard() {
+    socket.emit('host:continueBoard', { sessionId: sessionId!, hostToken: hostToken! });
+  }
+  function assignDouble(playerId: string) {
+    socket.emit('host:assignDouble', { sessionId: sessionId!, hostToken: hostToken!, playerId });
+  }
+  function setChallenge(challengedId: string) {
+    socket.emit('host:setChallenge', { sessionId: sessionId!, hostToken: hostToken!, challengedId });
   }
   function revealFinal(playerId: string, isCorrect: boolean) {
     socket.emit('host:revealFinal', { sessionId: sessionId!, hostToken: hostToken!, playerId, isCorrect });
@@ -91,6 +118,7 @@ export function HostBoardView() {
         <div className="flex-1">
           <GameBoard
             categories={gameConfig.categories}
+            gameId={gameConfig.id}
             onSelectQuestion={phase === 'board' ? selectQuestion : undefined}
             activeQuestionId={activeQuestion?.questionId}
           />
@@ -102,7 +130,7 @@ export function HostBoardView() {
 
           {/* Timer + controles */}
           <AnimatePresence>
-            {(phase === 'question' || phase === 'buzzer_queue') && activeQuestion && (
+            {(phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && activeQuestion && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -132,29 +160,79 @@ export function HostBoardView() {
 
           {/* Fila de buzzers */}
           <AnimatePresence>
-            {phase === 'buzzer_queue' && pendingBuzzers.length > 0 && (
+            {phase === 'buzzer_queue' && (pendingBuzzers.length > 0 || challengeState?.challengedId) && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 className="card flex flex-col gap-3"
               >
-                <h3 className="text-jeopardy-gold font-bold text-sm">Fila de Respostas</h3>
-                {pendingBuzzers.map((entry, i) => (
-                  <div key={entry.playerId} className="flex flex-col gap-2 border-b border-slate-600 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400 text-xs">#{i + 1}</span>
-                      <span className="font-bold flex-1">{entry.playerName}</span>
-                    </div>
-                    {i === 0 && (
-                      <div className="flex gap-2">
-                        <button className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded text-sm" onClick={() => judge(entry.playerId, true)}>Correto</button>
-                        <button className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-sm" onClick={() => judge(entry.playerId, false)}>Errado</button>
-                        <button className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded text-sm" onClick={() => skipPlayer(entry.playerId)}>Pular</button>
-                      </div>
+                {activeQuestion?.question.type === 'challenge' ? (
+                  // UI especial para challenge
+                  <>
+                    <h3 className="text-jeopardy-gold font-bold text-sm">⚔️ Desafio</h3>
+                    {!challengeState?.challengedId ? (
+                      // Passo 1: desafiador buzzou, selecionar desafiado
+                      <>
+                        <p className="text-sm text-white font-bold">
+                          {pendingBuzzers[0]?.playerName} desafia quem?
+                        </p>
+                        <div className="flex flex-col gap-1">
+                          {players
+                            .filter((p) => p.id !== pendingBuzzers[0]?.playerId)
+                            .map((p) => (
+                              <button
+                                key={p.id}
+                                className="text-left py-1 px-2 rounded bg-slate-700 hover:bg-jeopardy-gold hover:text-jeopardy-blue text-sm font-bold transition-colors"
+                                onClick={() => setChallenge(p.id)}
+                              >
+                                {p.name}
+                              </button>
+                            ))}
+                        </div>
+                        <button className="btn-ghost text-xs py-1" onClick={() => skipPlayer(pendingBuzzers[0]?.playerId)}>Pular</button>
+                      </>
+                    ) : (
+                      // Passo 2: desafiado definido, julgar
+                      <>
+                        <p className="text-xs text-slate-400">
+                          <span className="text-white font-bold">{challengeState.challengerName}</span> desafia{' '}
+                          <span className="text-jeopardy-gold font-bold">{challengeState.challengedName}</span>
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Certo: {challengeState.challengedName} +${activeQuestion.question.value}, {challengeState.challengerName} -${Math.floor(activeQuestion.question.value / 2)}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Errado: {challengeState.challengedName} -${activeQuestion.question.value}, {challengeState.challengerName} +${Math.floor(activeQuestion.question.value / 2)}
+                        </p>
+                        <div className="flex gap-2 mt-1">
+                          <button className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded text-sm" onClick={() => judge(challengeState.challengedId!, true)}>Correto</button>
+                          <button className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-sm" onClick={() => judge(challengeState.challengedId!, false)}>Errado</button>
+                        </div>
+                      </>
                     )}
-                  </div>
-                ))}
+                  </>
+                ) : (
+                  // UI padrão de fila
+                  <>
+                    <h3 className="text-jeopardy-gold font-bold text-sm">Fila de Respostas</h3>
+                    {pendingBuzzers.map((entry, i) => (
+                      <div key={entry.playerId} className="flex flex-col gap-2 border-b border-slate-600 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400 text-xs">#{i + 1}</span>
+                          <span className="font-bold flex-1">{entry.playerName}</span>
+                        </div>
+                        {i === 0 && (
+                          <div className="flex gap-2">
+                            <button className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded text-sm" onClick={() => judge(entry.playerId, true)}>Correto</button>
+                            <button className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-sm" onClick={() => judge(entry.playerId, false)}>Errado</button>
+                            <button className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded text-sm" onClick={() => skipPlayer(entry.playerId)}>Pular</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -163,7 +241,7 @@ export function HostBoardView() {
 
       {/* Overlay da questão ativa */}
       <AnimatePresence>
-        {activeQuestion && phase === 'question' && pendingBuzzers.length === 0 && (
+        {activeQuestion && (phase === 'question' || phase === 'all_play') && pendingBuzzers.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -173,10 +251,30 @@ export function HostBoardView() {
             <div className="max-w-3xl w-full text-center">
               <div className="text-jeopardy-gold text-2xl mb-4">${activeQuestion.question.value}</div>
               {activeQuestion.question.media && (
-                <img src={`/media/${activeQuestion.question.media.filename}`} alt="" className="mx-auto max-h-64 object-contain mb-6 rounded-xl" />
+                <img src={`/media/${gameConfig.id}/${activeQuestion.question.media.filename}`} alt="" className="mx-auto max-h-56 object-contain mb-4 rounded-xl" />
+              )}
+              {activeQuestion.question.clueAudio && (
+                <audio
+                  key={activeQuestion.question.clueAudio.filename}
+                  ref={audioCallbackRef}
+                  src={`/media/${gameConfig.id}/${activeQuestion.question.clueAudio.filename}`}
+                  controls autoPlay className="mx-auto mb-4"
+                  onPlay={() => emitAudio('play')}
+                  onPause={() => emitAudio('pause')}
+                  onSeeked={() => emitAudio(audioRef.current?.paused ? 'seek' : 'play')}
+                />
               )}
               <p className="text-4xl font-bold leading-tight mb-8">{activeQuestion.question.clue}</p>
-              <p className="text-slate-400 italic mb-6 text-lg">{activeQuestion.question.answer}</p>
+              <p className="text-slate-400 italic mb-4 text-lg">{activeQuestion.question.answer}</p>
+              {activeQuestion.question.answerMedia && (
+                <img src={`/media/${gameConfig.id}/${activeQuestion.question.answerMedia.filename}`} alt="" className="mx-auto max-h-40 object-contain mb-3 rounded-xl opacity-80 border-2 border-jeopardy-gold/40" />
+              )}
+              {activeQuestion.question.answerAudio && (
+                <audio
+                  src={`/media/${gameConfig.id}/${activeQuestion.question.answerAudio.filename}`}
+                  controls className="mx-auto mb-4"
+                />
+              )}
               {timer && (
                 <div className="max-w-md mx-auto mb-6">
                   <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
@@ -190,6 +288,117 @@ export function HostBoardView() {
                 <button className="btn-ghost" onClick={() => timerControl('extend', 30)}>+30s</button>
                 <button className="btn-ghost text-red-400 border-red-400" onClick={clearQuestion}>Fechar</button>
               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Overlay da Dupla Aposta */}
+      <AnimatePresence>
+        {phase === 'double_wager' && activeQuestion && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-jeopardy-blue flex items-center justify-center p-8 z-50"
+          >
+            <div className="max-w-2xl w-full text-center flex flex-col items-center gap-6">
+              <div className="text-6xl">🎯</div>
+              <h2 className="text-4xl font-bold text-jeopardy-gold">DUPLA APOSTA!</h2>
+              <div className="text-jeopardy-gold text-xl">${activeQuestion.question.value} · {activeQuestion.question.clue}</div>
+              <p className="text-slate-400 italic text-sm">{activeQuestion.question.answer}</p>
+
+              {!doublePlayerId ? (
+                <div className="w-full">
+                  <p className="text-slate-300 mb-4">Atribuir a qual jogador?</p>
+                  <div className="flex flex-col gap-2">
+                    {players.map((p) => (
+                      <button
+                        key={p.id}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 hover:bg-jeopardy-gold hover:text-jeopardy-blue transition-colors font-bold"
+                        onClick={() => assignDouble(p.id)}
+                      >
+                        <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: p.avatarColor }} />
+                        <span className="flex-1 text-left">{p.name}</span>
+                        <span className="text-sm opacity-60">${p.score.toLocaleString('pt-BR')}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{doublePlayerName}</p>
+                  <p className="text-slate-400 mt-2 animate-pulse">Aguardando aposta...</p>
+                </div>
+              )}
+
+              <button className="btn-ghost text-sm" onClick={clearQuestion}>Cancelar</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Overlay de revelação da resposta */}
+      <AnimatePresence>
+        {phase === 'answer_reveal' && activeQuestion && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-jeopardy-blue flex items-center justify-center p-8 z-50"
+          >
+            <div className="max-w-3xl w-full text-center flex flex-col items-center gap-6">
+              <div className="text-jeopardy-gold text-2xl">${activeQuestion.question.value}</div>
+
+              {/* Clue (referência) */}
+              {activeQuestion.question.media && (
+                <img src={`/media/${gameConfig.id}/${activeQuestion.question.media.filename}`} alt="" className="max-h-32 object-contain rounded-xl opacity-60" />
+              )}
+              {activeQuestion.question.clueAudio && (
+                activeQuestion.question.answerAudio
+                  // Quando há answerAudio, o clue audio é só referência visual — sem sync
+                  ? <audio
+                      src={`/media/${gameConfig.id}/${activeQuestion.question.clueAudio.filename}`}
+                      controls
+                      className="mx-auto opacity-40 pointer-events-none"
+                    />
+                  // Quando só existe clueAudio, ele é o áudio principal — sincroniza
+                  : <audio
+                      ref={audioCallbackRef}
+                      src={`/media/${gameConfig.id}/${activeQuestion.question.clueAudio.filename}`}
+                      controls className="mx-auto opacity-60"
+                      onPlay={() => emitAudio('play')}
+                      onPause={() => emitAudio('pause')}
+                      onSeeked={() => emitAudio(audioRef.current?.paused ? 'seek' : 'play')}
+                    />
+              )}
+
+              <p className="text-slate-400 text-xl italic">{activeQuestion.question.clue}</p>
+
+              <div className="border-t border-jeopardy-gold/30 pt-6 w-full">
+                <p className="text-slate-400 text-sm uppercase tracking-widest mb-2">Resposta</p>
+                <p className="text-4xl font-bold text-jeopardy-gold leading-tight">{activeQuestion.question.answer}</p>
+              </div>
+
+              {/* Mídia da resposta */}
+              {activeQuestion.question.answerMedia && (
+                <img src={`/media/${gameConfig.id}/${activeQuestion.question.answerMedia.filename}`} alt="" className="max-h-56 object-contain rounded-xl border-2 border-jeopardy-gold/40" />
+              )}
+              {activeQuestion.question.answerAudio && (
+                <audio
+                  key={activeQuestion.question.answerAudio.filename}
+                  ref={audioCallbackRef}
+                  src={`/media/${gameConfig.id}/${activeQuestion.question.answerAudio.filename}`}
+                  controls autoPlay className="mx-auto"
+                  onPlay={() => emitAudio('play')}
+                  onPause={() => emitAudio('pause')}
+                  onSeeked={() => emitAudio(audioRef.current?.paused ? 'seek' : 'play')}
+                />
+              )}
+
+              <button className="btn-primary text-xl px-10 py-3 mt-2" onClick={continueBoard}>
+                Continuar →
+              </button>
             </div>
           </motion.div>
         )}

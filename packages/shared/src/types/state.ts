@@ -8,9 +8,18 @@ export type GamePhase =
   | 'question'
   | 'buzzer_queue'
   | 'all_play'
+  | 'double_wager'
+  | 'answer_reveal'
   | 'final_challenge'
   | 'final_reveal'
   | 'game_over';
+
+export interface ChallengeState {
+  challengerId: string;
+  challengerName: string;
+  challengedId: string | null;
+  challengedName: string | null;
+}
 
 export interface BuzzerEntry {
   playerId: string;
@@ -39,6 +48,11 @@ export interface GameSession {
   activeQuestion: ActiveQuestion | null;
   buzzerQueue: BuzzerEntry[];
   finalChallengeWagers: Record<string, FinalChallengeWager>;
+  // Double (Dupla Aposta)
+  doublePlayerId: string | null;
+  doubleWager: number | null;
+  // Challenge
+  challengeState: ChallengeState | null;
   startedAt?: number;
   endedAt?: number;
 }

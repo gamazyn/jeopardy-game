@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket.js';
 import { useGameStore } from '../store/gameStore.js';
 import { usePlayerStore } from '../store/playerStore.js';
-import type { GameConfig } from '@jeopardy/shared';
+import { ConfirmModal } from '../components/ui/ConfirmModal.js';
 
 interface GameSummary {
   id: string;
@@ -20,12 +20,18 @@ export function HostSetupView() {
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<GameSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  function loadGames() {
     fetch('/api/games')
       .then((r) => r.json())
       .then(setGames)
       .catch(() => setGames([]));
+  }
+
+  useEffect(() => {
+    loadGames();
   }, []);
 
   function handleHost() {
@@ -50,6 +56,21 @@ export function HostSetupView() {
     });
   }
 
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await fetch(`/api/games/${deleteTarget.id}`, { method: 'DELETE' });
+      if (selected === deleteTarget.id) setSelected(null);
+      setGames((gs) => gs.filter((g) => g.id !== deleteTarget.id));
+    } catch {
+      setError('Erro ao deletar jogo');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl">
@@ -65,21 +86,39 @@ export function HostSetupView() {
         ) : (
           <div className="flex flex-col gap-3 mb-6">
             {games.map((g) => (
-              <button
+              <div
                 key={g.id}
                 onClick={() => setSelected(g.id)}
-                className={`card text-left transition-all ${
+                className={`card cursor-pointer transition-all ${
                   selected === g.id
                     ? 'border-jeopardy-gold bg-jeopardy-blue-light'
                     : 'border-slate-600 hover:border-slate-500'
                 }`}
               >
-                <div className="font-bold text-lg">{g.name}</div>
-                {g.description && <div className="text-slate-400 text-sm mt-1">{g.description}</div>}
-                <div className="text-slate-500 text-xs mt-2">
-                  Atualizado: {new Date(g.updatedAt).toLocaleDateString('pt-BR')}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-lg truncate">{g.name}</div>
+                    {g.description && <div className="text-slate-400 text-sm mt-1">{g.description}</div>}
+                    <div className="text-slate-500 text-xs mt-2">
+                      Atualizado: {new Date(g.updatedAt).toLocaleDateString('pt-BR')}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className="text-xs py-1 px-3 border border-slate-500 text-slate-300 hover:border-jeopardy-gold hover:text-jeopardy-gold rounded-lg transition-colors"
+                      onClick={() => navigate(`/editor/${g.id}`)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="text-xs py-1 px-3 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-colors"
+                      onClick={() => setDeleteTarget(g)}
+                    >
+                      Deletar
+                    </button>
+                  </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
@@ -104,6 +143,17 @@ export function HostSetupView() {
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title={`Deletar "${deleteTarget?.name}"?`}
+        description="O jogo e todas as mídias serão deletados permanentemente. Esta ação não pode ser desfeita."
+        confirmLabel={deleting ? 'Deletando...' : 'Deletar'}
+        cancelLabel="Cancelar"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

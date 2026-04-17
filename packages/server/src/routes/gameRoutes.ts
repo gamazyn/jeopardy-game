@@ -6,22 +6,27 @@ import type { GameConfig } from '@jeopardy/shared';
 
 export const gameRouter: IRouter = Router();
 
+const MediaAssetSchema = z.object({ type: z.enum(['image', 'audio']), filename: z.string(), altText: z.string().optional() });
+
 const QuestionSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   value: z.number().int().positive(),
   clue: z.string().min(1).max(2000),
   answer: z.string().min(1).max(500),
   type: z.enum(['standard', 'all_play', 'challenge', 'double']),
-  media: z.object({ type: z.enum(['image', 'audio']), filename: z.string(), altText: z.string().optional() }).optional(),
+  media: MediaAssetSchema.optional(),
+  clueAudio: MediaAssetSchema.optional(),
+  answerMedia: MediaAssetSchema.optional(),
+  answerAudio: MediaAssetSchema.optional(),
   used: z.boolean(),
   challengeTarget: z.string().optional(),
   timeOverride: z.number().int().positive().optional(),
 });
 
 const CategorySchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   name: z.string().min(1).max(100),
-  media: z.object({ type: z.enum(['image', 'audio']), filename: z.string(), altText: z.string().optional() }).optional(),
+  media: MediaAssetSchema.optional(),
   questions: z.array(QuestionSchema).min(1).max(10),
 });
 
@@ -33,7 +38,7 @@ const GameConfigSchema = z.object({
   finalChallengeEnabled: z.boolean(),
   finalChallengeClue: z.string().max(2000),
   finalChallengeAnswer: z.string().max(500),
-  finalChallengeMedia: z.object({ type: z.enum(['image', 'audio']), filename: z.string() }).optional(),
+  finalChallengeMedia: MediaAssetSchema.optional(),
 });
 
 // GET /api/games — listar jogos
