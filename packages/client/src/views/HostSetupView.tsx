@@ -50,7 +50,7 @@ export function HostSetupView() {
           socket.disconnect();
           return;
         }
-        setSession(res.sessionId, res.hostToken, res.tunnelUrl, true);
+        setSession(res.sessionId, res.hostToken, res.tunnelUrl, res.localUrl, true);
         navigate(`/host/${res.sessionId}`);
       });
     });

@@ -8,7 +8,7 @@ import { useSocketEvents } from '../hooks/useSocketEvents.js';
 export function LobbyView() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { players, phase, hostToken, tunnelUrl, isHost } = useGameStore();
+  const { players, phase, hostToken, tunnelUrl, localUrl, isHost } = useGameStore();
   useSocketEvents();
 
   useEffect(() => {
@@ -30,23 +30,25 @@ export function LobbyView() {
           <div className="text-6xl font-bold text-jeopardy-gold tracking-widest border-4 border-jeopardy-gold rounded-2xl py-4 px-8 inline-block">
             {sessionId}
           </div>
-          {tunnelUrl && sessionId && (
+          {sessionId && (localUrl || tunnelUrl) && (
             <div className="mt-4 flex flex-col items-center gap-3">
               <div className="bg-white p-3 rounded-xl">
                 <QRCodeSVG
-                  value={`${tunnelUrl}/join/${sessionId}`}
+                  value={`${localUrl ?? tunnelUrl}/join/${sessionId}`}
                   size={160}
                   bgColor="#ffffff"
                   fgColor="#1e3a5f"
                 />
               </div>
-              <p className="text-slate-400 text-xs">Aponte a câmera para entrar na sala</p>
-              <button
-                className="text-jeopardy-gold underline text-sm"
-                onClick={() => navigator.clipboard.writeText(`${tunnelUrl}/join/${sessionId}`)}
-              >
-                Copiar link
-              </button>
+              <p className="text-slate-400 text-xs">Aponte a câmera (mesma rede Wi-Fi)</p>
+              {tunnelUrl && (
+                <button
+                  className="text-jeopardy-gold underline text-sm"
+                  onClick={() => navigator.clipboard.writeText(`${tunnelUrl}/join/${sessionId}`)}
+                >
+                  Copiar link remoto
+                </button>
+              )}
             </div>
           )}
         </div>

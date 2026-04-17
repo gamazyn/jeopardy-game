@@ -28,7 +28,7 @@ export function JoinView() {
     socket.once('player:joined', ({ allPlayers }) => {
       const me = allPlayers.find((p) => p.id === socket.id);
       if (me) {
-        setSession(sessionId.toUpperCase(), null, null, false);
+        setSession(sessionId.toUpperCase(), null, null, null, false);
         navigate(`/game/${sessionId.toUpperCase()}/player`);
       }
       setIsJoining(false);

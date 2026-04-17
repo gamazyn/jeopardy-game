@@ -139,6 +139,7 @@ export interface S2C_SessionCreated {
   sessionId: string;
   hostToken: string;
   tunnelUrl: string | null;
+  localUrl: string | null;
 }
 
 export interface S2C_PlayerJoined {

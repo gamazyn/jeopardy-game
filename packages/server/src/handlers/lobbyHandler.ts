@@ -15,9 +15,14 @@ const AVATAR_COLORS = [
 ];
 
 let tunnelUrl: string | null = null;
+let localUrl: string | null = null;
 
 export function setTunnelUrl(url: string | null): void {
   tunnelUrl = url;
+}
+
+export function setLocalUrl(url: string | null): void {
+  localUrl = url;
 }
 
 export function registerLobbyHandlers(
@@ -67,7 +72,7 @@ export function registerLobbyHandlers(
     socket.join(`session:${sessionId}`);
     socket.join(`host:${sessionId}`);
 
-    ack({ sessionId, hostToken, tunnelUrl });
+    ack({ sessionId, hostToken, tunnelUrl, localUrl });
   });
 
   // PLAYER: entrar na sessão
