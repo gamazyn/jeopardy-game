@@ -300,6 +300,7 @@ export interface ClientToServerEvents {
   'host:adjustScore': (data: C2S_HostAdjustScore) => void;
   'host:timerControl': (data: C2S_HostTimerControl) => void;
   'host:clearQuestion': (data: C2S_HostClearQuestion) => void;
+  'host:clearQuestionNoReveal': (data: C2S_HostClearQuestion) => void;
   'host:continueBoard': (data: C2S_HostContinueBoard) => void;
   'host:audioControl': (data: C2S_HostAudioControl) => void;
   'host:startFinal': (data: C2S_HostStartFinal) => void;
