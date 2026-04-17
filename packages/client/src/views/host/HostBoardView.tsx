@@ -88,7 +88,7 @@ export function HostBoardView() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col p-4 gap-4">
+    <div className="fixed inset-0 flex flex-col p-4 gap-3 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-jeopardy-gold truncate">{gameConfig.name}</h1>
@@ -113,19 +113,20 @@ export function HostBoardView() {
         </div>
       </div>
 
-      <div className="flex gap-4 flex-1">
+      <div className="flex gap-4 flex-1 min-h-0">
         {/* Board */}
-        <div className="flex-1">
+        <div className="flex-1 min-h-0">
           <GameBoard
             categories={gameConfig.categories}
             gameId={gameConfig.id}
             onSelectQuestion={phase === 'board' ? selectQuestion : undefined}
             activeQuestionId={activeQuestion?.questionId}
+            fillHeight
           />
         </div>
 
         {/* Painel lateral */}
-        <div className="w-64 flex flex-col gap-4">
+        <div className="w-64 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
           <Scoreboard players={players} />
 
           {/* Timer + controles */}

@@ -6,24 +6,36 @@ interface Props {
   gameId?: string;
   onSelectQuestion?: (categoryId: string, questionId: string) => void;
   activeQuestionId?: string | null;
+  fillHeight?: boolean;
 }
 
-export function GameBoard({ categories, gameId, onSelectQuestion, activeQuestionId }: Props) {
+export function GameBoard({ categories, gameId, onSelectQuestion, activeQuestionId, fillHeight = false }: Props) {
+  const maxQuestions = Math.max(...categories.map((c) => c.questions.length));
   return (
     <div
-      className="grid gap-1 w-full"
-      style={{ gridTemplateColumns: `repeat(${categories.length}, 1fr)` }}
+      className={`grid gap-1 w-full ${fillHeight ? 'h-full' : ''}`}
+      style={{
+        gridTemplateColumns: `repeat(${categories.length}, 1fr)`,
+        ...(fillHeight ? { gridTemplateRows: `repeat(${maxQuestions + 1}, 1fr)` } : {}),
+      }}
     >
       {/* Headers das categorias */}
       {categories.map((cat) => (
         <div
           key={cat.id}
-          className="bg-jeopardy-blue-light border-4 border-slate-800 flex items-center justify-center text-center p-3 min-h-[80px]"
+          className={`border-4 border-slate-800 flex items-center justify-center text-center p-1 md:p-3 overflow-hidden ${fillHeight ? '' : 'min-h-[80px]'}`}
+          style={{
+            background: 'linear-gradient(180deg, #1e3a5f 0%, #0d1f33 100%)',
+            boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.08), inset 0 -3px 0 rgba(0,0,0,0.5)',
+          }}
         >
           {cat.media ? (
             <img src={`/media/${gameId}/${cat.media.filename}`} alt={cat.name} className="max-h-16 object-contain" />
           ) : (
-            <span className="font-bold text-jeopardy-gold uppercase text-sm leading-tight">
+            <span
+              className="font-value font-bold text-white uppercase text-sm leading-tight tracking-widest"
+              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
+            >
               {cat.name}
             </span>
           )}
@@ -32,7 +44,6 @@ export function GameBoard({ categories, gameId, onSelectQuestion, activeQuestion
 
       {/* Questões */}
       {(() => {
-        const maxQuestions = Math.max(...categories.map((c) => c.questions.length));
         return Array.from({ length: maxQuestions }, (_, rowIdx) =>
           categories.map((cat) => {
             const q = cat.questions[rowIdx];
@@ -45,7 +56,7 @@ export function GameBoard({ categories, gameId, onSelectQuestion, activeQuestion
                 key={q.id}
                 whileHover={!q.used ? { scale: 1.03 } : {}}
                 whileTap={!q.used ? { scale: 0.97 } : {}}
-                className={`question-cell aspect-[4/3] ${q.used ? 'used' : ''} ${
+                className={`question-cell ${fillHeight ? '' : 'aspect-[4/3]'} ${q.used ? 'used' : ''} ${
                   isActive ? 'ring-4 ring-jeopardy-gold' : ''
                 }`}
                 onClick={() => {

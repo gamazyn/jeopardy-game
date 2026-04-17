@@ -4,10 +4,40 @@ import type { Player } from '@jeopardy/shared';
 interface Props {
   players: Player[];
   myId?: string;
+  compact?: boolean;
 }
 
-export function Scoreboard({ players, myId }: Props) {
+export function Scoreboard({ players, myId, compact = false }: Props) {
   const sorted = [...players].sort((a, b) => b.score - a.score);
+
+  if (compact) {
+    return (
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {sorted.map((player) => (
+          <motion.div
+            key={player.id}
+            layout
+            className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-lg min-w-[72px] ${
+              player.id === myId ? 'bg-jeopardy-gold/20 border border-jeopardy-gold' : 'bg-slate-800/40'
+            }`}
+          >
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: player.avatarColor }} />
+            <span className={`text-xs truncate max-w-[64px] ${!player.isConnected ? 'opacity-50' : ''}`}>
+              {player.name}
+            </span>
+            <motion.span
+              key={player.score}
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 0.3 }}
+              className={`font-bold text-xs ${player.score < 0 ? 'text-red-400' : 'text-jeopardy-gold'}`}
+            >
+              ${player.score.toLocaleString('pt-BR')}
+            </motion.span>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-1">

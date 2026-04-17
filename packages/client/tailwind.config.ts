@@ -14,6 +14,8 @@ export default {
       },
       fontFamily: {
         display: ['Georgia', 'Times New Roman', 'serif'],
+        ui: ['Lato', 'system-ui', 'sans-serif'],
+        value: ['Oswald', 'Georgia', 'serif'],
       },
       animation: {
         'flip-in': 'flipIn 0.6s ease-in-out',
