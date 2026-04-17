@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { resolve } from 'path';
 import type { ServerToClientEvents, ClientToServerEvents } from '@jeopardy/shared';
-import { PORT, CLIENT_URL, GAMES_DIR } from './config.js';
+import { PORT, CLIENT_URL, GAMES_DIR, NODE_ENV } from './config.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { gameRouter } from './routes/gameRoutes.js';
 import { mediaRouter } from './routes/mediaRoutes.js';
@@ -47,7 +47,7 @@ export function createApp(): { app: ReturnType<typeof express>; httpServer: Retu
   });
 
   // Em produção, servir o client buildado
-  if (process.env.NODE_ENV === 'production') {
+  if (NODE_ENV === 'production') {
     const clientDist = resolve(process.cwd(), '../client/dist');
     app.use(express.static(clientDist));
     app.get('*', (_req, res) => {

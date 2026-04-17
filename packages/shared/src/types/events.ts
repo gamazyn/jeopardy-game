@@ -1,6 +1,6 @@
 import type { GameConfig, MediaAsset } from './game.js';
 import type { Player } from './player.js';
-import type { ActiveQuestion, BuzzerEntry, GamePhase } from './state.js';
+import type { ActiveQuestion, BuzzerEntry, GamePhase, ChallengeState } from './state.js';
 
 // ============================================================
 // CLIENT → SERVER
@@ -59,6 +59,23 @@ export interface C2S_HostClearQuestion {
   hostToken: string;
 }
 
+export interface C2S_HostContinueBoard {
+  sessionId: string;
+  hostToken: string;
+}
+
+export interface C2S_HostAudioControl {
+  sessionId: string;
+  hostToken: string;
+  action: 'play' | 'pause' | 'seek';
+  currentTime: number;
+}
+
+export interface S2C_AudioSync {
+  action: 'play' | 'pause' | 'seek';
+  currentTime: number;
+}
+
 export interface C2S_HostStartFinal {
   sessionId: string;
   hostToken: string;
@@ -86,6 +103,27 @@ export interface C2S_PlayerFinalWager {
   playerId: string;
   amount: number;
   answer: string;
+}
+
+// Dupla Aposta: host atribui a um jogador
+export interface C2S_HostAssignDouble {
+  sessionId: string;
+  hostToken: string;
+  playerId: string;
+}
+
+// Dupla Aposta: jogador envia a aposta
+export interface C2S_PlayerDoubleWager {
+  sessionId: string;
+  playerId: string;
+  amount: number;
+}
+
+// Challenge: host seleciona quem será desafiado
+export interface C2S_HostSetChallenge {
+  sessionId: string;
+  hostToken: string;
+  challengedId: string;
 }
 
 // ============================================================
@@ -127,6 +165,10 @@ export interface S2C_QuestionClosed {
   questionId: string;
   categoryId: string;
   phase: GamePhase;
+}
+
+export interface S2C_QuestionAnswerReveal {
+  phase: 'answer_reveal';
 }
 
 export interface S2C_BuzzerConfirmed {
@@ -199,6 +241,23 @@ export interface S2C_GameOver {
   winnerId: string;
 }
 
+// Dupla Aposta: anuncio do jogador atribuído (null = aguardando atribuição)
+export interface S2C_DoubleStarted {
+  assignedPlayerId: string | null;
+  assignedPlayerName: string | null;
+}
+
+// Dupla Aposta: aposta confirmada, clue vai revelar
+export interface S2C_DoubleWagerLocked {
+  assignedPlayerId: string;
+  amount: number;
+}
+
+// Challenge: host definiu o par desafiador/desafiado
+export interface S2C_ChallengeAssigned {
+  challengeState: ChallengeState;
+}
+
 // ============================================================
 // Mapa de eventos tipados para uso no Socket.io
 // ============================================================
@@ -211,6 +270,8 @@ export interface ServerToClientEvents {
   'game:started': (data: S2C_GameStarted) => void;
   'question:selected': (data: S2C_QuestionSelected) => void;
   'question:closed': (data: S2C_QuestionClosed) => void;
+  'question:answerReveal': (data: S2C_QuestionAnswerReveal) => void;
+  'audio:sync': (data: S2C_AudioSync) => void;
   'buzzer:opened': () => void;
   'buzzer:confirmed': (data: S2C_BuzzerConfirmed) => void;
   'buzzer:queueUpdate': (data: S2C_BuzzerQueueUpdate) => void;
@@ -223,6 +284,9 @@ export interface ServerToClientEvents {
   'final:hostDetails': (data: S2C_FinalHostDetails) => void;
   'final:revealed': (data: S2C_FinalRevealed) => void;
   'game:over': (data: S2C_GameOver) => void;
+  'double:started': (data: S2C_DoubleStarted) => void;
+  'double:wagerLocked': (data: S2C_DoubleWagerLocked) => void;
+  'challenge:assigned': (data: S2C_ChallengeAssigned) => void;
 }
 
 export interface ClientToServerEvents {
@@ -235,9 +299,14 @@ export interface ClientToServerEvents {
   'host:adjustScore': (data: C2S_HostAdjustScore) => void;
   'host:timerControl': (data: C2S_HostTimerControl) => void;
   'host:clearQuestion': (data: C2S_HostClearQuestion) => void;
+  'host:continueBoard': (data: C2S_HostContinueBoard) => void;
+  'host:audioControl': (data: C2S_HostAudioControl) => void;
   'host:startFinal': (data: C2S_HostStartFinal) => void;
   'host:revealFinal': (data: C2S_HostRevealFinal) => void;
   'host:endGame': (data: C2S_HostEndGame) => void;
   'player:buzz': (data: C2S_PlayerBuzz) => void;
   'player:finalWager': (data: C2S_PlayerFinalWager) => void;
+  'host:assignDouble': (data: C2S_HostAssignDouble) => void;
+  'player:doubleWager': (data: C2S_PlayerDoubleWager) => void;
+  'host:setChallenge': (data: C2S_HostSetChallenge) => void;
 }

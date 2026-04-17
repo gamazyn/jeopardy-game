@@ -5,6 +5,7 @@ import type {
   GamePhase,
   ActiveQuestion,
   BuzzerEntry,
+  ChallengeState,
 } from '@jeopardy/shared';
 
 interface TimerState {
@@ -51,6 +52,14 @@ interface GameState {
   hostWagers: Record<string, HostWager>;    // detalhes das apostas (só host recebe)
   revealedWagers: Record<string, boolean>;  // quais jogadores já foram revelados
 
+  // Dupla Aposta
+  doublePlayerId: string | null;
+  doublePlayerName: string | null;
+  doubleWager: number | null;
+
+  // Challenge
+  challengeState: ChallengeState | null;
+
   // Ações
   setSession: (sessionId: string, hostToken: string | null, tunnelUrl: string | null, isHost: boolean) => void;
   setGameStarted: (config: Omit<GameConfig, 'finalChallengeAnswer'>, players: Player[]) => void;
@@ -66,6 +75,9 @@ interface GameState {
   addHostWager: (wager: HostWager) => void;
   markWagerRevealed: (playerId: string) => void;
   setMyWagerSent: () => void;
+  setDoubleAssigned: (playerId: string | null, playerName: string | null) => void;
+  setDoubleWagerLocked: (wager: number) => void;
+  setChallengeState: (state: ChallengeState | null) => void;
   reset: () => void;
 }
 
@@ -87,6 +99,10 @@ const initialState = {
   finalCorrectAnswer: null,
   hostWagers: {},
   revealedWagers: {},
+  doublePlayerId: null,
+  doublePlayerName: null,
+  doubleWager: null,
+  challengeState: null,
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -147,6 +163,13 @@ export const useGameStore = create<GameState>((set) => ({
     set((s) => ({ revealedWagers: { ...s.revealedWagers, [playerId]: true } })),
 
   setMyWagerSent: () => set({ myWagerSent: true }),
+
+  setDoubleAssigned: (doublePlayerId, doublePlayerName) =>
+    set({ doublePlayerId, doublePlayerName }),
+
+  setDoubleWagerLocked: (doubleWager) => set({ doubleWager }),
+
+  setChallengeState: (challengeState) => set({ challengeState }),
 
   reset: () => set(initialState),
 }));

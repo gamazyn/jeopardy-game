@@ -37,6 +37,7 @@ export function LandingView() {
     socket.once('error', ({ message }) => {
       setError(message);
       setIsJoining(false);
+      socket.off('player:joined');
       socket.disconnect();
     });
   }

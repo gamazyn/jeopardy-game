@@ -3,11 +3,12 @@ import type { Category } from '@jeopardy/shared';
 
 interface Props {
   categories: Category[];
+  gameId?: string;
   onSelectQuestion?: (categoryId: string, questionId: string) => void;
   activeQuestionId?: string | null;
 }
 
-export function GameBoard({ categories, onSelectQuestion, activeQuestionId }: Props) {
+export function GameBoard({ categories, gameId, onSelectQuestion, activeQuestionId }: Props) {
   return (
     <div
       className="grid gap-1 w-full"
@@ -20,7 +21,7 @@ export function GameBoard({ categories, onSelectQuestion, activeQuestionId }: Pr
           className="bg-jeopardy-blue-light border-4 border-slate-800 flex items-center justify-center text-center p-3 min-h-[80px]"
         >
           {cat.media ? (
-            <img src={`/media/${cat.media.filename}`} alt={cat.name} className="max-h-16 object-contain" />
+            <img src={`/media/${gameId}/${cat.media.filename}`} alt={cat.name} className="max-h-16 object-contain" />
           ) : (
             <span className="font-bold text-jeopardy-gold uppercase text-sm leading-tight">
               {cat.name}

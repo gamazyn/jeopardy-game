@@ -30,6 +30,15 @@ export function useSocketEvents() {
       store.setActiveQuestion(activeQuestion);
       store.setPhase(phase);
       setBuzzerPosition(null);
+      // Limpar estado de tipos especiais ao selecionar nova questão
+      store.setDoubleAssigned(null, null);
+      store.setChallengeState(null);
+    });
+
+    socket.on('question:answerReveal', ({ phase }) => {
+      store.setPhase(phase);
+      store.setBuzzerQueue([]);
+      setBuzzerPosition(null);
     });
 
     socket.on('question:closed', ({ categoryId, questionId, phase }) => {
@@ -105,6 +114,22 @@ export function useSocketEvents() {
       store.setPhase('game_over');
     });
 
+    socket.on('double:started', ({ assignedPlayerId, assignedPlayerName }) => {
+      store.setDoubleAssigned(assignedPlayerId, assignedPlayerName);
+      // Garantir fase double_wager caso o evento chegue após question:selected
+      if (assignedPlayerId) {
+        // Fase já foi setada via question:selected — só atualiza o player atribuído
+      }
+    });
+
+    socket.on('double:wagerLocked', ({ amount }) => {
+      store.setDoubleWagerLocked(amount);
+    });
+
+    socket.on('challenge:assigned', ({ challengeState }) => {
+      store.setChallengeState(challengeState);
+    });
+
     socket.on('error', ({ code, message }) => {
       console.error(`[socket error] ${code}: ${message}`);
     });
@@ -115,6 +140,7 @@ export function useSocketEvents() {
       socket.off('player:left');
       socket.off('game:started');
       socket.off('question:selected');
+      socket.off('question:answerReveal');
       socket.off('question:closed');
       socket.off('buzzer:opened');
       socket.off('buzzer:confirmed');
@@ -128,6 +154,9 @@ export function useSocketEvents() {
       socket.off('final:hostWagerReceived');
       socket.off('final:revealed');
       socket.off('game:over');
+      socket.off('double:started');
+      socket.off('double:wagerLocked');
+      socket.off('challenge:assigned');
       socket.off('error');
       // Não desconecta — conexão persiste durante toda a sessão de jogo
     };

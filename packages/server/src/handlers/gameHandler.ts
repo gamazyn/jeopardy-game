@@ -85,30 +85,105 @@ export function registerGameHandlers(
       timerDuration: timerMs,
     };
 
-    updateSession(payload.sessionId, {
-      phase: 'question',
-      activeQuestion,
-      buzzerQueue: [],
-    });
+    if (question.type === 'double') {
+      // Dupla Aposta: vai para double_wager — timer não começa, aguarda host atribuir jogador
+      updateSession(payload.sessionId, {
+        phase: 'double_wager',
+        activeQuestion,
+        buzzerQueue: [],
+        doublePlayerId: null,
+        doubleWager: null,
+        challengeState: null,
+      });
+      io.to(`session:${payload.sessionId}`).emit('question:selected', {
+        activeQuestion,
+        phase: 'double_wager',
+      });
+      // Host vê aviso; host precisa atribuir um jogador via host:assignDouble
+      io.to(`host:${payload.sessionId}`).emit('double:started', {
+        assignedPlayerId: null,
+        assignedPlayerName: null,
+      });
+      return;
+    }
 
-    io.to(`session:${payload.sessionId}`).emit('question:selected', {
-      activeQuestion,
-      phase: 'question',
-    });
+    if (question.type === 'all_play') {
+      // Todos jogam: vai direto para all_play, timer começa
+      updateSession(payload.sessionId, {
+        phase: 'all_play',
+        activeQuestion,
+        buzzerQueue: [],
+        challengeState: null,
+      });
+      io.to(`session:${payload.sessionId}`).emit('question:selected', {
+        activeQuestion,
+        phase: 'all_play',
+      });
+    } else {
+      // Standard ou challenge: fase question normal
+      updateSession(payload.sessionId, {
+        phase: 'question',
+        activeQuestion,
+        buzzerQueue: [],
+        challengeState: null,
+      });
+      io.to(`session:${payload.sessionId}`).emit('question:selected', {
+        activeQuestion,
+        phase: 'question',
+      });
+    }
 
-    startTimer(io, payload.sessionId, timerMs, () => {
+    const onExpire = () => {
       const current = getSession(payload.sessionId);
-      if (current?.phase === 'question') {
+      if (current?.phase === 'question' || current?.phase === 'all_play') {
         closeQuestion(io, payload.sessionId, false);
       }
+    };
+
+    startTimer(io, payload.sessionId, timerMs, onExpire);
+  });
+
+  // HOST: atribuir jogador para Dupla Aposta
+  socket.on('host:assignDouble', (payload) => {
+    const session = requireHost(socket, payload.sessionId, payload.hostToken);
+    if (!session || session.phase !== 'double_wager') return;
+
+    const player = session.players[payload.playerId];
+    if (!player) {
+      socket.emit('error', { code: 'PLAYER_NOT_FOUND', message: 'Jogador não encontrado.' });
+      return;
+    }
+
+    updateSession(payload.sessionId, { doublePlayerId: payload.playerId });
+
+    io.to(`session:${payload.sessionId}`).emit('double:started', {
+      assignedPlayerId: player.id,
+      assignedPlayerName: player.name,
     });
   });
 
-  // HOST: limpar questão sem pontuar
+  // HOST: limpar questão sem pontuar (vai para answer_reveal)
   socket.on('host:clearQuestion', (payload) => {
     const session = requireHost(socket, payload.sessionId, payload.hostToken);
     if (!session) return;
     closeQuestion(io, payload.sessionId, false);
+  });
+
+  // HOST: controle de áudio — broadcast para todos exceto o host
+  socket.on('host:audioControl', (payload) => {
+    const session = requireHost(socket, payload.sessionId, payload.hostToken);
+    if (!session) return;
+    socket.to(`session:${payload.sessionId}`).emit('audio:sync', {
+      action: payload.action,
+      currentTime: payload.currentTime,
+    });
+  });
+
+  // HOST: avançar do answer_reveal para o board
+  socket.on('host:continueBoard', (payload) => {
+    const session = requireHost(socket, payload.sessionId, payload.hostToken);
+    if (!session || session.phase !== 'answer_reveal') return;
+    continueBoard(io, payload.sessionId);
   });
 
   // HOST: controle do timer
@@ -118,7 +193,7 @@ export function registerGameHandlers(
 
     const onExpire = () => {
       const current = getSession(payload.sessionId);
-      if (current?.phase === 'question') closeQuestion(io, payload.sessionId, false);
+      if (current?.phase === 'question' || current?.phase === 'all_play') closeQuestion(io, payload.sessionId, false);
     };
 
     switch (payload.action) {
@@ -194,15 +269,31 @@ export function closeQuestion(
 
   const updatedConfig = { ...session.gameConfig, categories: updatedCategories };
 
-  // Verificar se todas as questões foram usadas → Desafio Final
-  const allUsed = allQuestionsUsed(updatedCategories);
-  const nextPhase = allUsed && updatedConfig.finalChallengeEnabled ? 'final_challenge' : 'board';
+  // Ir para answer_reveal mantendo activeQuestion para exibição da resposta
+  updateSession(sessionId, {
+    phase: 'answer_reveal',
+    buzzerQueue: [],
+    gameConfig: updatedConfig,
+  });
+
+  io.to(`session:${sessionId}`).emit('question:answerReveal', { phase: 'answer_reveal' });
+}
+
+export function continueBoard(
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  sessionId: string,
+): void {
+  const session = getSession(sessionId);
+  if (!session?.activeQuestion) return;
+
+  const { categoryId, questionId } = session.activeQuestion;
+  const allUsed = allQuestionsUsed(session.gameConfig.categories);
+  const nextPhase = allUsed && session.gameConfig.finalChallengeEnabled ? 'final_challenge' : 'board';
 
   updateSession(sessionId, {
     phase: nextPhase,
     activeQuestion: null,
     buzzerQueue: [],
-    gameConfig: updatedConfig,
   });
 
   io.to(`session:${sessionId}`).emit('question:closed', {

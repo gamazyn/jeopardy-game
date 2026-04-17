@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socket } from '../../socket.js';
@@ -20,12 +20,37 @@ export function PlayerGameView() {
     timer,
     myWagerSent,
     finalClue,
+    finalMedia,
     setMyWagerSent,
+    doublePlayerId,
+    doublePlayerName,
+    doubleWager,
+    challengeState,
   } = useGameStore();
   const { myId, myName, buzzerPosition } = usePlayerStore();
   const [wagerAmount, setWagerAmount] = useState('');
   const [wagerAnswer, setWagerAnswer] = useState('');
+  const [doubleWagerInput, setDoubleWagerInput] = useState('');
+  const [doubleWagerSent, setDoubleWagerSent] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Callback ref que ignora null: evita que a exit animation do AnimatePresence
+  // sobrescreva o ref com null depois do novo elemento já ter sido registrado.
+  const audioCallbackRef = useCallback((el: HTMLAudioElement | null) => {
+    if (el !== null) audioRef.current = el;
+  }, []);
   useSocketEvents();
+
+  useEffect(() => {
+    function handleAudioSync({ action, currentTime }: { action: 'play' | 'pause' | 'seek'; currentTime: number }) {
+      const el = audioRef.current;
+      if (!el) return;
+      el.currentTime = currentTime;
+      if (action === 'play') el.play().catch(() => {});
+      else if (action === 'pause') el.pause();
+    }
+    socket.on('audio:sync', handleAudioSync);
+    return () => { socket.off('audio:sync', handleAudioSync); };
+  }, []);
 
   const myPlayer = players.find((p) => p.id === myId);
 
@@ -40,6 +65,14 @@ export function PlayerGameView() {
     const amount = Math.max(0, parseInt(wagerAmount) || 0);
     socket.emit('player:finalWager', { sessionId, playerId: myId, amount, answer: wagerAnswer });
     setMyWagerSent();
+  }
+
+  function submitDoubleWager(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sessionId || !myId) return;
+    const amount = Math.max(0, parseInt(doubleWagerInput) || 0);
+    socket.emit('player:doubleWager', { sessionId, playerId: myId, amount });
+    setDoubleWagerSent(true);
   }
 
   if (!gameConfig) {
@@ -71,7 +104,8 @@ export function PlayerGameView() {
     );
   }
 
-  const canBuzz = (phase === 'question' || phase === 'all_play') && !buzzerPosition;
+  const isDoubleAndNotAssigned = activeQuestion?.question.type === 'double' && doublePlayerId && doublePlayerId !== myId;
+  const canBuzz = (phase === 'question' || phase === 'all_play') && !buzzerPosition && !isDoubleAndNotAssigned;
 
   return (
     <div className="min-h-screen flex flex-col p-4 gap-4">
@@ -87,11 +121,12 @@ export function PlayerGameView() {
       </div>
 
       {/* Board (somente leitura) */}
-      {(phase === 'board' || phase === 'question' || phase === 'buzzer_queue') && (
+      {(phase === 'board' || phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && (
         <div className="flex gap-4">
           <div className="flex-1">
             <GameBoard
               categories={gameConfig.categories}
+              gameId={gameConfig.id}
               activeQuestionId={activeQuestion?.questionId}
             />
           </div>
@@ -101,9 +136,50 @@ export function PlayerGameView() {
         </div>
       )}
 
+      {/* Dupla Aposta */}
+      {phase === 'double_wager' && activeQuestion && (
+        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-6 z-50 gap-6">
+          <div className="text-6xl">🎯</div>
+          <h2 className="text-4xl font-bold text-jeopardy-gold">DUPLA APOSTA!</h2>
+          <p className="text-jeopardy-gold text-xl">${activeQuestion.question.value}</p>
+
+          {doublePlayerId === myId ? (
+            // Sou o jogador atribuído
+            !doubleWagerSent ? (
+              <form onSubmit={submitDoubleWager} className="flex flex-col gap-4 w-full max-w-md">
+                <p className="text-center text-slate-300">Você foi selecionado! Faça sua aposta antes de ver a pergunta.</p>
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.max(myPlayer?.score ?? 0, 0)}
+                  value={doubleWagerInput}
+                  onChange={(e) => setDoubleWagerInput(e.target.value)}
+                  className="w-full bg-jeopardy-blue-light border-2 border-jeopardy-gold rounded-lg px-4 py-3 text-jeopardy-gold text-2xl text-center font-bold focus:outline-none"
+                  placeholder="0"
+                  autoFocus
+                />
+                <p className="text-slate-400 text-xs text-center">Máx: ${Math.max(myPlayer?.score ?? 0, 0).toLocaleString('pt-BR')}</p>
+                <button type="submit" className="btn-primary text-xl">Confirmar Aposta</button>
+              </form>
+            ) : (
+              <p className="text-slate-300 animate-pulse">Aposta enviada! Aguardando o host...</p>
+            )
+          ) : doublePlayerId ? (
+            // Outro jogador foi selecionado
+            <div className="text-center text-slate-300">
+              <p className="text-xl font-bold text-white">{doublePlayerName}</p>
+              <p className="text-slate-400 mt-2 animate-pulse">está fazendo sua aposta...</p>
+            </div>
+          ) : (
+            // Aguardando host atribuir
+            <p className="text-slate-400 animate-pulse">Aguardando o host atribuir a um jogador...</p>
+          )}
+        </div>
+      )}
+
       {/* Questão ativa — overlay para player */}
       <AnimatePresence>
-        {activeQuestion && (phase === 'question' || phase === 'buzzer_queue') && (
+        {activeQuestion && (phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -112,13 +188,31 @@ export function PlayerGameView() {
           >
             <div className="text-jeopardy-gold text-xl">
               ${activeQuestion.question.value}
+              {phase === 'all_play' && <span className="ml-3 text-sm bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">TODOS JOGAM</span>}
+              {activeQuestion.question.type === 'double' && doubleWager !== null && <span className="ml-3 text-sm bg-purple-500 text-white px-2 py-0.5 rounded font-bold">DUPLA APOSTA ${doubleWager}</span>}
             </div>
+
+            {/* Notificação de challenge */}
+            {challengeState?.challengedId === myId && (
+              <div className="bg-orange-600 text-white px-4 py-2 rounded-xl font-bold text-lg">
+                ⚔️ Você foi desafiado por {challengeState.challengerName}!
+              </div>
+            )}
 
             {activeQuestion.question.media && (
               <img
-                src={`/media/${activeQuestion.question.media.filename}`}
+                src={`/media/${gameConfig.id}/${activeQuestion.question.media.filename}`}
                 alt=""
                 className="max-h-48 object-contain rounded-xl"
+              />
+            )}
+
+            {activeQuestion.question.clueAudio && (
+              <audio
+                key={activeQuestion.question.clueAudio.filename}
+                ref={audioCallbackRef}
+                src={`/media/${gameConfig.id}/${activeQuestion.question.clueAudio.filename}`}
+                autoPlay
               />
             )}
 
@@ -137,7 +231,7 @@ export function PlayerGameView() {
             )}
 
             {/* Buzzer */}
-            {phase === 'question' && (
+            {(phase === 'question' || phase === 'all_play') && !isDoubleAndNotAssigned && (
               <motion.button
                 whileTap={{ scale: 0.92 }}
                 className={`w-40 h-40 rounded-full font-bold text-2xl border-8 transition-all ${
@@ -167,12 +261,72 @@ export function PlayerGameView() {
         )}
       </AnimatePresence>
 
+      {/* Revelação da resposta */}
+      {phase === 'answer_reveal' && activeQuestion && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-8 z-50 gap-6 text-center"
+        >
+          <div className="text-jeopardy-gold text-xl">${activeQuestion.question.value}</div>
+
+          {/* Clue reference (dimmed) */}
+          {activeQuestion.question.media && (
+            <img
+              src={`/media/${gameConfig.id}/${activeQuestion.question.media.filename}`}
+              alt=""
+              className="max-h-36 object-contain rounded-xl opacity-60"
+            />
+          )}
+          {/* Hidden clue audio for sync — only used when no answerAudio */}
+          {activeQuestion.question.clueAudio && !activeQuestion.question.answerAudio && (
+            <audio
+              key={activeQuestion.question.clueAudio.filename}
+              ref={audioCallbackRef}
+              src={`/media/${gameConfig.id}/${activeQuestion.question.clueAudio.filename}`}
+            />
+          )}
+
+          <p className="text-slate-400 text-lg italic max-w-xl">{activeQuestion.question.clue}</p>
+
+          <div className="border-t border-jeopardy-gold/30 pt-6 w-full max-w-xl">
+            <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Resposta</p>
+            <p className="text-4xl font-bold text-jeopardy-gold leading-tight">{activeQuestion.question.answer}</p>
+          </div>
+
+          {activeQuestion.question.answerMedia && (
+            <img
+              src={`/media/${gameConfig.id}/${activeQuestion.question.answerMedia.filename}`}
+              alt=""
+              className="max-h-56 object-contain rounded-xl border-2 border-jeopardy-gold/40"
+            />
+          )}
+          {activeQuestion.question.answerAudio && (
+            <audio
+              key={activeQuestion.question.answerAudio.filename}
+              ref={audioCallbackRef}
+              src={`/media/${gameConfig.id}/${activeQuestion.question.answerAudio.filename}`}
+              autoPlay
+            />
+          )}
+
+          <p className="text-slate-500 text-sm animate-pulse">Aguardando o host continuar...</p>
+        </motion.div>
+      )}
+
       {/* Desafio Final */}
       {phase === 'final_challenge' && (
         <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-6 z-50 gap-6">
           <h2 className="text-4xl font-bold text-jeopardy-gold">Desafio Final!</h2>
           {finalClue && (
             <p className="text-2xl font-bold text-center max-w-xl">{finalClue}</p>
+          )}
+          {finalMedia && (
+            finalMedia.type === 'audio' ? (
+              <audio src={`/media/${gameConfig?.id}/${finalMedia.filename}`} autoPlay controls className="w-full max-w-md" />
+            ) : (
+              <img src={`/media/${gameConfig?.id}/${finalMedia.filename}`} alt="" className="max-h-48 object-contain rounded-xl" />
+            )
           )}
           {!myWagerSent ? (
             <form onSubmit={submitWager} className="flex flex-col gap-4 w-full max-w-md">

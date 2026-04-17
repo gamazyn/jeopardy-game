@@ -59,6 +59,9 @@ export function registerLobbyHandlers(
       activeQuestion: null,
       buzzerQueue: [],
       finalChallengeWagers: {},
+      doublePlayerId: null,
+      doubleWager: null,
+      challengeState: null,
     });
 
     socket.join(`session:${sessionId}`);
