@@ -28,7 +28,7 @@ export function LandingView() {
     socket.once('player:joined', ({ allPlayers }) => {
       const me = allPlayers.find((p) => p.id === socket.id);
       if (me) {
-        setSession(joinCode.toUpperCase(), null, null, false);
+        setSession(joinCode.toUpperCase(), null, null, null, false);
         navigate(`/game/${joinCode.toUpperCase()}/player`);
       }
       setIsJoining(false);
