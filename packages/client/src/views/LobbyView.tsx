@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { socket } from '../socket.js';
 import { useGameStore } from '../store/gameStore.js';
 import { useSocketEvents } from '../hooks/useSocketEvents.js';
@@ -29,16 +30,24 @@ export function LobbyView() {
           <div className="text-6xl font-bold text-jeopardy-gold tracking-widest border-4 border-jeopardy-gold rounded-2xl py-4 px-8 inline-block">
             {sessionId}
           </div>
-          {tunnelUrl && (
-            <p className="text-slate-400 text-sm mt-3 break-all">
-              Link remoto:{' '}
+          {tunnelUrl && sessionId && (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="bg-white p-3 rounded-xl">
+                <QRCodeSVG
+                  value={`${tunnelUrl}/join/${sessionId}`}
+                  size={160}
+                  bgColor="#ffffff"
+                  fgColor="#1e3a5f"
+                />
+              </div>
+              <p className="text-slate-400 text-xs">Aponte a câmera para entrar na sala</p>
               <button
-                className="text-jeopardy-gold underline"
-                onClick={() => navigator.clipboard.writeText(`${tunnelUrl}?code=${sessionId}`)}
+                className="text-jeopardy-gold underline text-sm"
+                onClick={() => navigator.clipboard.writeText(`${tunnelUrl}/join/${sessionId}`)}
               >
                 Copiar link
               </button>
-            </p>
+            </div>
           )}
         </div>
 
