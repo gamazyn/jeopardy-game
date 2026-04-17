@@ -105,7 +105,7 @@ export function PlayerGameView() {
   }
 
   const isDoubleAndNotAssigned = activeQuestion?.question.type === 'double' && doublePlayerId && doublePlayerId !== myId;
-  const canBuzz = (phase === 'question' || phase === 'all_play') && !buzzerPosition && !isDoubleAndNotAssigned;
+  const canBuzz = (phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !buzzerPosition && !isDoubleAndNotAssigned;
 
   return (
     <div className="min-h-screen flex flex-col p-4 gap-4">
@@ -151,14 +151,19 @@ export function PlayerGameView() {
                 <input
                   type="number"
                   min={0}
-                  max={Math.max(myPlayer?.score ?? 0, 0)}
+                  max={Math.max(myPlayer?.score ?? 0, activeQuestion.question.value)}
                   value={doubleWagerInput}
                   onChange={(e) => setDoubleWagerInput(e.target.value)}
                   className="w-full bg-jeopardy-blue-light border-2 border-jeopardy-gold rounded-lg px-4 py-3 text-jeopardy-gold text-2xl text-center font-bold focus:outline-none"
                   placeholder="0"
                   autoFocus
                 />
-                <p className="text-slate-400 text-xs text-center">Máx: ${Math.max(myPlayer?.score ?? 0, 0).toLocaleString('pt-BR')}</p>
+                <p className="text-slate-400 text-xs text-center">
+                  Máx: ${Math.max(myPlayer?.score ?? 0, activeQuestion.question.value).toLocaleString('pt-BR')}
+                  {(myPlayer?.score ?? 0) < 0 && (
+                    <span className="text-orange-400 ml-1">(valor da questão — saldo negativo)</span>
+                  )}
+                </p>
                 <button type="submit" className="btn-primary text-xl">Confirmar Aposta</button>
               </form>
             ) : (
@@ -231,7 +236,7 @@ export function PlayerGameView() {
             )}
 
             {/* Buzzer */}
-            {(phase === 'question' || phase === 'all_play') && !isDoubleAndNotAssigned && (
+            {(phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !isDoubleAndNotAssigned && (
               <motion.button
                 whileTap={{ scale: 0.92 }}
                 className={`w-40 h-40 rounded-full font-bold text-2xl border-8 transition-all ${

@@ -39,7 +39,8 @@ export function registerBuzzerHandlers(
     const session = getSession(payload.sessionId);
     if (!session) return;
 
-    if (session.phase !== 'question' && session.phase !== 'all_play') return;
+    // Aceita buzz em question, all_play e buzzer_queue (para montar a fila completa)
+    if (session.phase !== 'question' && session.phase !== 'all_play' && session.phase !== 'buzzer_queue') return;
 
     const player = session.players[socket.id];
     if (!player) return;
@@ -226,11 +227,13 @@ export function registerBuzzerHandlers(
     const player = session.players[socket.id];
     if (!player) return;
 
-    const maxWager = Math.max(player.score, 0);
-    const amount = Math.max(0, Math.min(payload.amount, maxWager));
-
     const activeQuestion = session.activeQuestion;
     if (!activeQuestion) return;
+
+    // Saldo negativo: pode apostar até o valor da questão (chance de recuperar)
+    // Saldo positivo: pode apostar até o saldo atual
+    const maxWager = Math.max(player.score, activeQuestion.question.value);
+    const amount = Math.max(0, Math.min(payload.amount, maxWager));
 
     // Salva aposta e transita para question (clue revela para todos, timer inicia)
     updateSession(payload.sessionId, {
