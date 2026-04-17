@@ -9,12 +9,12 @@ import { PORT, CLIENT_URL, GAMES_DIR, NODE_ENV } from './config.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { gameRouter } from './routes/gameRoutes.js';
 import { mediaRouter } from './routes/mediaRoutes.js';
-import { registerLobbyHandlers, setTunnelUrl } from './handlers/lobbyHandler.js';
+import { registerLobbyHandlers, setTunnelUrl, setLocalUrl } from './handlers/lobbyHandler.js';
 import { registerGameHandlers } from './handlers/gameHandler.js';
 import { registerBuzzerHandlers } from './handlers/buzzerHandler.js';
 import { registerFinalHandlers } from './handlers/finalHandler.js';
 
-export function createApp(): { app: ReturnType<typeof express>; httpServer: ReturnType<typeof createServer>; io: Server<ClientToServerEvents, ServerToClientEvents>; setTunnelUrl: typeof setTunnelUrl } {
+export function createApp(): { app: ReturnType<typeof express>; httpServer: ReturnType<typeof createServer>; io: Server<ClientToServerEvents, ServerToClientEvents>; setTunnelUrl: typeof setTunnelUrl; setLocalUrl: typeof setLocalUrl } {
   const app = express();
 
   app.use(
@@ -76,5 +76,5 @@ export function createApp(): { app: ReturnType<typeof express>; httpServer: Retu
     });
   });
 
-  return { app, httpServer, io, setTunnelUrl };
+  return { app, httpServer, io, setTunnelUrl, setLocalUrl };
 }

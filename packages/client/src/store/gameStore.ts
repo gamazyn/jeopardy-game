@@ -31,6 +31,7 @@ interface GameState {
   sessionId: string | null;
   hostToken: string | null;
   tunnelUrl: string | null;
+  localUrl: string | null;
   isHost: boolean;
 
   // Jogo
@@ -61,7 +62,7 @@ interface GameState {
   challengeState: ChallengeState | null;
 
   // Ações
-  setSession: (sessionId: string, hostToken: string | null, tunnelUrl: string | null, isHost: boolean) => void;
+  setSession: (sessionId: string, hostToken: string | null, tunnelUrl: string | null, localUrl: string | null, isHost: boolean) => void;
   setGameStarted: (config: Omit<GameConfig, 'finalChallengeAnswer'>, players: Player[]) => void;
   setPhase: (phase: GamePhase) => void;
   setPlayers: (players: Player[]) => void;
@@ -85,6 +86,7 @@ const initialState = {
   sessionId: null,
   hostToken: null,
   tunnelUrl: null,
+  localUrl: null,
   isHost: false,
   gameConfig: null,
   players: [],
@@ -108,8 +110,8 @@ const initialState = {
 export const useGameStore = create<GameState>((set) => ({
   ...initialState,
 
-  setSession: (sessionId, hostToken, tunnelUrl, isHost) =>
-    set({ sessionId, hostToken, tunnelUrl, isHost }),
+  setSession: (sessionId, hostToken, tunnelUrl, localUrl, isHost) =>
+    set({ sessionId, hostToken, tunnelUrl, localUrl, isHost }),
 
   setGameStarted: (config, players) =>
     set({ gameConfig: config, players, phase: 'board' }),
