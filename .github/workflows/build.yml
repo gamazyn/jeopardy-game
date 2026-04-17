@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.2.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Package artifact
+        run: |
+          mkdir -p release/packages
+          cp -r packages/server/dist release/packages/server
+          cp -r packages/client/dist release/packages/client
+          cp packages/server/package.json release/packages/server/package.json
+          cp package.json pnpm-lock.yaml pnpm-workspace.yaml release/
+          tar -czf jeopardy-game.tar.gz -C release .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jeopardy-game
+          path: jeopardy-game.tar.gz
+          retention-days: 7

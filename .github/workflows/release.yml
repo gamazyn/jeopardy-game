@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.2.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Package release
+        run: |
+          mkdir -p release/packages
+          cp -r packages/server/dist release/packages/server
+          cp -r packages/client/dist release/packages/client
+          cp packages/server/package.json release/packages/server/package.json
+          cp package.json pnpm-lock.yaml pnpm-workspace.yaml release/
+          tar -czf jeopardy-game-${{ github.ref_name }}.tar.gz -C release .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: jeopardy-game-${{ github.ref_name }}.tar.gz
