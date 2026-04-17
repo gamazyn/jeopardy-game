@@ -169,6 +169,13 @@ export function registerGameHandlers(
     closeQuestion(io, payload.sessionId, false);
   });
 
+  // HOST: fechar questão sem revelar resposta (vai direto para board)
+  socket.on('host:clearQuestionNoReveal', (payload) => {
+    const session = requireHost(socket, payload.sessionId, payload.hostToken);
+    if (!session) return;
+    closeQuestionNoReveal(io, payload.sessionId);
+  });
+
   // HOST: controle de áudio — broadcast para todos exceto o host
   socket.on('host:audioControl', (payload) => {
     const session = requireHost(socket, payload.sessionId, payload.hostToken);
@@ -277,6 +284,31 @@ export function closeQuestion(
   });
 
   io.to(`session:${sessionId}`).emit('question:answerReveal', { phase: 'answer_reveal' });
+}
+
+export function closeQuestionNoReveal(
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  sessionId: string,
+): void {
+  stopTimer(sessionId);
+  const session = getSession(sessionId);
+  if (!session?.activeQuestion) return;
+
+  const { categoryId, questionId } = session.activeQuestion;
+  const allUsed = allQuestionsUsed(session.gameConfig.categories);
+  const nextPhase = allUsed && session.gameConfig.finalChallengeEnabled ? 'final_challenge' : 'board';
+
+  updateSession(sessionId, {
+    phase: nextPhase,
+    activeQuestion: null,
+    buzzerQueue: [],
+  });
+
+  io.to(`session:${sessionId}`).emit('question:closed', {
+    questionId,
+    categoryId,
+    phase: nextPhase,
+  });
 }
 
 export function continueBoard(

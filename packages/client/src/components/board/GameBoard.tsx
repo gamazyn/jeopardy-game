@@ -33,8 +33,8 @@ export function GameBoard({ categories, gameId, onSelectQuestion, activeQuestion
             <img src={`/media/${gameId}/${cat.media.filename}`} alt={cat.name} className="max-h-16 object-contain" />
           ) : (
             <span
-              className="font-value font-bold text-white uppercase text-sm leading-tight tracking-widest"
-              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}
+              className="font-arcade text-white uppercase text-xs md:text-sm leading-tight tracking-widest"
+              style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9), 0 0 20px rgba(255,255,255,0.1)' }}
             >
               {cat.name}
             </span>

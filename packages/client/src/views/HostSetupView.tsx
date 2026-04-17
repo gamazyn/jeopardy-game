@@ -14,7 +14,7 @@ interface GameSummary {
 
 export function HostSetupView() {
   const navigate = useNavigate();
-  const { setSession } = useGameStore();
+  const { setSession, reset: resetGame } = useGameStore();
   const { setMyId } = usePlayerStore();
   const [games, setGames] = useState<GameSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -39,6 +39,8 @@ export function HostSetupView() {
     setLoading(true);
     setError('');
 
+    resetGame();
+    socket.disconnect();
     socket.connect();
 
     socket.once('connect', () => {
@@ -72,73 +74,144 @@ export function HostSetupView() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-2xl">
-        <h1 className="text-4xl font-bold text-jeopardy-gold mb-8 text-center">Hospedar Jogo</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* grid background */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(232,184,75,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(232,184,75,0.03) 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
+        }}
+      />
+
+      <div className="w-full max-w-2xl relative z-10">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate('/')}
+            className="text-slate-500 hover:text-slate-300 text-sm font-ui transition-colors mb-4 flex items-center gap-1"
+          >
+            ← Voltar
+          </button>
+          <p className="text-slate-500 font-ui text-xs uppercase tracking-widest mb-1">🎙️ Hospedar</p>
+          <h1
+            className="font-arcade text-4xl text-jeopardy-gold"
+            style={{ textShadow: '0 0 20px rgba(232,184,75,0.4), 0 2px 0 #8a6a1a' }}
+          >
+            ESCOLHA UM JOGO
+          </h1>
+        </div>
 
         {games.length === 0 ? (
-          <div className="card text-center text-slate-300">
-            <p className="mb-4">Nenhum jogo salvo. Crie um primeiro!</p>
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{
+              background: 'linear-gradient(160deg, #1a2e45 0%, #0f1f33 100%)',
+              border: '1px solid rgba(232,184,75,0.15)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div className="text-4xl mb-4">📋</div>
+            <p className="text-slate-300 font-ui mb-2">Nenhum jogo salvo ainda.</p>
+            <p className="text-slate-500 font-ui text-sm mb-6">Crie seu primeiro quiz para começar.</p>
             <button className="btn-primary" onClick={() => navigate('/editor')}>
               Criar Jogo
             </button>
           </div>
         ) : (
           <div className="flex flex-col gap-3 mb-6">
-            {games.map((g) => (
-              <div
-                key={g.id}
-                onClick={() => setSelected(g.id)}
-                className={`card cursor-pointer transition-all ${
-                  selected === g.id
-                    ? 'border-jeopardy-gold bg-jeopardy-blue-light'
-                    : 'border-slate-600 hover:border-slate-500'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-lg truncate">{g.name}</div>
-                    {g.description && <div className="text-slate-400 text-sm mt-1">{g.description}</div>}
-                    <div className="text-slate-500 text-xs mt-2">
-                      Atualizado: {new Date(g.updatedAt).toLocaleDateString('pt-BR')}
+            {games.map((g) => {
+              const isSelected = selected === g.id;
+              return (
+                <div
+                  key={g.id}
+                  onClick={() => setSelected(g.id)}
+                  className="rounded-2xl cursor-pointer transition-all duration-200"
+                  style={{
+                    background: isSelected
+                      ? 'linear-gradient(160deg, #1e3a5f 0%, #0d1f33 100%)'
+                      : 'linear-gradient(160deg, #141f30 0%, #0e1823 100%)',
+                    border: isSelected ? '1px solid rgba(232,184,75,0.6)' : '1px solid rgba(255,255,255,0.06)',
+                    boxShadow: isSelected
+                      ? '0 0 0 1px rgba(232,184,75,0.2), 0 8px 24px rgba(0,0,0,0.4)'
+                      : '0 2px 8px rgba(0,0,0,0.3)',
+                    borderLeft: isSelected ? '3px solid #E8B84B' : '3px solid transparent',
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3 p-5">
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="font-ui font-bold text-lg truncate"
+                        style={{ color: isSelected ? '#E8B84B' : '#e2e8f0' }}
+                      >
+                        {g.name}
+                      </div>
+                      {g.description && (
+                        <div className="text-slate-400 font-ui text-sm mt-1 truncate">{g.description}</div>
+                      )}
+                      <div className="text-slate-600 font-ui text-xs mt-2 uppercase tracking-wider">
+                        Atualizado {new Date(g.updatedAt).toLocaleDateString('pt-BR')}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="text-xs py-1.5 px-3 rounded-lg font-ui transition-all duration-150"
+                        style={{
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: '#94a3b8',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.borderColor = 'rgba(232,184,75,0.5)';
+                          (e.currentTarget as HTMLElement).style.color = '#E8B84B';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
+                          (e.currentTarget as HTMLElement).style.color = '#94a3b8';
+                        }}
+                        onClick={() => navigate(`/editor/${g.id}`)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="text-xs py-1.5 px-3 rounded-lg font-ui transition-all duration-150"
+                        style={{ border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = 'transparent';
+                        }}
+                        onClick={() => setDeleteTarget(g)}
+                      >
+                        Deletar
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="text-xs py-1 px-3 border border-slate-500 text-slate-300 hover:border-jeopardy-gold hover:text-jeopardy-gold rounded-lg transition-colors"
-                      onClick={() => navigate(`/editor/${g.id}`)}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="text-xs py-1 px-3 border border-red-500 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-colors"
-                      onClick={() => setDeleteTarget(g)}
-                    >
-                      Deletar
-                    </button>
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {error && <p className="text-red-400 mb-4 text-center">{error}</p>}
+        {error && (
+          <p className="text-red-400 mb-4 text-center font-ui text-sm">{error}</p>
+        )}
 
-        <div className="flex gap-3">
-          <button className="btn-ghost flex-1" onClick={() => navigate('/')}>
-            Voltar
-          </button>
+        <div className="flex gap-3 mt-2">
           {games.length > 0 && (
             <button
-              className="btn-primary flex-1"
+              className="btn-primary flex-1 text-base"
               disabled={!selected || loading}
               onClick={handleHost}
             >
-              {loading ? 'Criando sala...' : 'Criar Sala'}
+              {loading ? 'Criando sala...' : '🎙️ Criar Sala'}
             </button>
           )}
-          <button className="btn-ghost" onClick={() => navigate('/editor')}>
+          <button
+            className="btn-ghost"
+            onClick={() => navigate('/editor')}
+            style={{ whiteSpace: 'nowrap' }}
+          >
             + Novo Jogo
           </button>
         </div>
