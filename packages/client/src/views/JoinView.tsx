@@ -7,8 +7,8 @@ import { usePlayerStore } from '../store/playerStore.js';
 export function JoinView() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { setSession } = useGameStore();
-  const { myName, setMyName, setMyId } = usePlayerStore();
+  const { setSession, reset: resetGame } = useGameStore();
+  const { myName, setMyName, setMyId, setBuzzerPosition } = usePlayerStore();
   const [error, setError] = useState('');
   const [isJoining, setIsJoining] = useState(false);
 
@@ -18,6 +18,9 @@ export function JoinView() {
     setIsJoining(true);
     setError('');
 
+    resetGame();
+    setBuzzerPosition(null);
+    socket.disconnect();
     socket.connect();
 
     socket.once('connect', () => {

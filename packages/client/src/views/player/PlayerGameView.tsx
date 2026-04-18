@@ -26,8 +26,9 @@ export function PlayerGameView() {
     doublePlayerName,
     doubleWager,
     challengeState,
+    reset: resetGame,
   } = useGameStore();
-  const { myId, myName, buzzerPosition } = usePlayerStore();
+  const { myId, myName, buzzerPosition, setBuzzerPosition } = usePlayerStore();
   const [wagerAmount, setWagerAmount] = useState('');
   const [wagerAnswer, setWagerAnswer] = useState('');
   const [doubleWagerInput, setDoubleWagerInput] = useState('');
@@ -77,7 +78,7 @@ export function PlayerGameView() {
 
   if (!gameConfig) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-6">
+      <div className="fixed inset-0 flex flex-col items-center justify-center p-6 gap-6 overflow-y-auto">
         <h1 className="text-5xl font-bold text-jeopardy-gold tracking-wider">JEOPARDY!</h1>
         <div className="card text-center max-w-sm w-full">
           <div className="text-4xl mb-4">⏳</div>
@@ -108,39 +109,51 @@ export function PlayerGameView() {
   const canBuzz = (phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !buzzerPosition && !isDoubleAndNotAssigned;
 
   return (
-    <div className="min-h-screen flex flex-col p-4 gap-4">
+    <div className="fixed inset-0 flex flex-col p-3 gap-2 overflow-hidden">
       {/* Header com meu score */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
-          <div className="text-slate-300 text-sm">{myName}</div>
-          <div className={`text-3xl font-bold ${(myPlayer?.score ?? 0) < 0 ? 'text-red-400' : 'text-jeopardy-gold'}`}>
+          <div className="text-slate-400 text-xs font-ui">{myName}</div>
+          <div
+            className={`text-2xl font-mono font-bold ${(myPlayer?.score ?? 0) < 0 ? 'text-red-400' : 'text-jeopardy-gold'}`}
+            style={(myPlayer?.score ?? 0) >= 0 ? { textShadow: '0 0 16px rgba(232,184,75,0.5)' } : undefined}
+          >
             ${(myPlayer?.score ?? 0).toLocaleString('pt-BR')}
           </div>
         </div>
-        <div className="text-slate-400 text-sm">{gameConfig.name}</div>
+        <div className="text-slate-400 text-xs">{gameConfig.name}</div>
       </div>
 
       {/* Board (somente leitura) */}
       {(phase === 'board' || phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && (
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <GameBoard
-              categories={gameConfig.categories}
-              gameId={gameConfig.id}
-              activeQuestionId={activeQuestion?.questionId}
-            />
+        <>
+          {/* Scoreboard mobile: faixa horizontal acima do board */}
+          <div className="flex-shrink-0 md:hidden">
+            <Scoreboard players={players} myId={myId ?? undefined} compact />
           </div>
-          <div className="w-48">
-            <Scoreboard players={players} myId={myId ?? undefined} />
+
+          <div className="flex flex-1 min-h-0 gap-3">
+            <div className="flex-1 min-w-0 min-h-0">
+              <GameBoard
+                categories={gameConfig.categories}
+                gameId={gameConfig.id}
+                activeQuestionId={activeQuestion?.questionId}
+                fillHeight
+              />
+            </div>
+            {/* Scoreboard desktop: coluna lateral */}
+            <div className="hidden md:block w-48 flex-shrink-0">
+              <Scoreboard players={players} myId={myId ?? undefined} />
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Dupla Aposta */}
       {phase === 'double_wager' && activeQuestion && (
-        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-6 z-50 gap-6">
-          <div className="text-6xl">🎯</div>
-          <h2 className="text-4xl font-bold text-jeopardy-gold">DUPLA APOSTA!</h2>
+        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto">
+          <div className="text-5xl md:text-6xl">🎯</div>
+          <h2 className="text-3xl md:text-4xl font-bold text-jeopardy-gold">DUPLA APOSTA!</h2>
           <p className="text-jeopardy-gold text-xl">${activeQuestion.question.value}</p>
 
           {doublePlayerId === myId ? (
@@ -189,7 +202,7 @@ export function PlayerGameView() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-jeopardy-blue/95 flex flex-col items-center justify-center p-6 z-50 gap-6"
+            className="fixed inset-0 bg-jeopardy-blue/95 flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto"
           >
             <div className="text-jeopardy-gold text-xl">
               ${activeQuestion.question.value}
@@ -221,7 +234,7 @@ export function PlayerGameView() {
               />
             )}
 
-            <p className="text-3xl font-bold text-center leading-tight max-w-2xl">
+            <p className="text-xl md:text-3xl font-bold text-center leading-tight max-w-2xl">
               {activeQuestion.question.clue}
             </p>
 
@@ -235,31 +248,38 @@ export function PlayerGameView() {
               </div>
             )}
 
+            {/* Tempo esgotado */}
+            {timer?.remainingMs === 0 && !timer.isPaused && (
+              <div
+                className="font-arcade text-2xl tracking-widest animate-pulse"
+                style={{ color: '#ef4444', textShadow: '0 0 20px rgba(239,68,68,0.7)' }}
+              >
+                ⏰ TEMPO ESGOTADO!
+              </div>
+            )}
+
             {/* Buzzer */}
             {(phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !isDoubleAndNotAssigned && (
               <motion.button
-                whileTap={{ scale: 0.92 }}
-                className={`w-40 h-40 rounded-full font-bold text-2xl border-8 transition-all ${
+                whileTap={canBuzz ? { y: 4 } : {}}
+                style={{ width: 'min(60vw, 180px)', height: 'min(60vw, 180px)' }}
+                className={`buzz-btn ${
                   buzzerPosition
-                    ? buzzerPosition === 1
-                      ? 'bg-green-600 border-green-400 text-white'
-                      : 'bg-gray-700 border-gray-600 text-gray-400'
-                    : 'bg-red-600 border-red-400 text-white animate-buzzer-pulse cursor-pointer'
+                    ? buzzerPosition === 1 ? 'winner' : 'queued'
+                    : 'available'
                 }`}
                 onClick={canBuzz ? buzz : undefined}
                 disabled={!!buzzerPosition}
               >
                 {buzzerPosition
-                  ? buzzerPosition === 1
-                    ? 'Sua vez!'
-                    : `#${buzzerPosition}`
+                  ? buzzerPosition === 1 ? 'SUA VEZ!' : `#${buzzerPosition}`
                   : 'BUZZ!'}
               </motion.button>
             )}
 
             {phase === 'buzzer_queue' && buzzerPosition === 1 && (
-              <div className="text-green-400 text-xl font-bold animate-pulse">
-                Responda!
+              <div className="text-green-400 text-lg font-arcade animate-pulse tracking-wider">
+                RESPONDA!
               </div>
             )}
           </motion.div>
@@ -271,9 +291,17 @@ export function PlayerGameView() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-8 z-50 gap-6 text-center"
+          className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-8 z-50 gap-4 md:gap-6 text-center overflow-y-auto"
         >
           <div className="text-jeopardy-gold text-xl">${activeQuestion.question.value}</div>
+          {timer?.remainingMs === 0 && (
+            <div
+              className="font-arcade text-xl tracking-widest"
+              style={{ color: '#ef4444', textShadow: '0 0 16px rgba(239,68,68,0.6)' }}
+            >
+              ⏰ TEMPO ESGOTADO!
+            </div>
+          )}
 
           {/* Clue reference (dimmed) */}
           {activeQuestion.question.media && (
@@ -296,7 +324,7 @@ export function PlayerGameView() {
 
           <div className="border-t border-jeopardy-gold/30 pt-6 w-full max-w-xl">
             <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Resposta</p>
-            <p className="text-4xl font-bold text-jeopardy-gold leading-tight">{activeQuestion.question.answer}</p>
+            <p className="text-2xl md:text-4xl font-bold text-jeopardy-gold leading-tight">{activeQuestion.question.answer}</p>
           </div>
 
           {activeQuestion.question.answerMedia && (
@@ -321,8 +349,8 @@ export function PlayerGameView() {
 
       {/* Desafio Final */}
       {phase === 'final_challenge' && (
-        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-6 z-50 gap-6">
-          <h2 className="text-4xl font-bold text-jeopardy-gold">Desafio Final!</h2>
+        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-jeopardy-gold">Desafio Final!</h2>
           {finalClue && (
             <p className="text-2xl font-bold text-center max-w-xl">{finalClue}</p>
           )}
@@ -365,44 +393,104 @@ export function PlayerGameView() {
               </button>
             </form>
           ) : (
-            <div className="text-center text-slate-300">
-              <p className="text-xl mb-2">Aposta enviada!</p>
-              <p>Aguardando o host revelar os resultados...</p>
+            <div
+              className="flex flex-col items-center gap-4 p-8 rounded-2xl text-center max-w-sm w-full"
+              style={{
+                background: 'rgba(232,184,75,0.06)',
+                border: '1px solid rgba(232,184,75,0.2)',
+              }}
+            >
+              <div className="text-4xl animate-bounce">⏳</div>
+              <p className="font-arcade text-lg text-jeopardy-gold tracking-wide">APOSTA ENVIADA!</p>
+              <p className="text-slate-400 font-ui text-sm">Aguardando o host decidir...</p>
+              <div className="flex gap-1.5 mt-1">
+                {[0,1,2].map(i => (
+                  <div
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-jeopardy-gold/40 animate-pulse"
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
       )}
 
+      {/* Aguardando revelação do Desafio Final */}
+      {phase === 'final_reveal' && (
+        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-6 z-50 gap-6">
+          <span className="text-5xl animate-bounce">🏆</span>
+          <h2
+            className="font-arcade text-3xl text-jeopardy-gold text-center"
+            style={{ textShadow: '0 0 24px rgba(232,184,75,0.6)' }}
+          >
+            DESAFIO FINAL!
+          </h2>
+          <div
+            className="flex flex-col items-center gap-3 p-6 rounded-2xl text-center max-w-sm w-full"
+            style={{ background: 'rgba(232,184,75,0.06)', border: '1px solid rgba(232,184,75,0.2)' }}
+          >
+            <p className="text-slate-300 font-ui">Aposta enviada!</p>
+            <p className="text-slate-500 font-ui text-sm">O host está revelando os resultados...</p>
+            <div className="flex gap-1.5 mt-2">
+              {[0,1,2].map(i => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-jeopardy-gold/40 animate-pulse"
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Game Over */}
       {phase === 'game_over' && (
-        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-6 z-50 gap-6">
-          <h2 className="text-5xl font-bold text-jeopardy-gold mb-4">Fim de Jogo!</h2>
+        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto">
+          <h2
+            className="font-arcade text-4xl md:text-5xl text-jeopardy-gold mb-2 md:mb-4"
+            style={{ textShadow: '0 0 30px rgba(232,184,75,0.7), 0 0 60px rgba(232,184,75,0.3)' }}
+          >
+            FIM DE JOGO!
+          </h2>
           <div className="flex flex-col gap-2 w-full max-w-md">
             {[...players]
               .sort((a, b) => b.score - a.score)
-              .map((p, i) => (
-                <motion.div
-                  key={p.id}
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className={`flex items-center gap-3 p-3 rounded-xl ${
-                    i === 0 ? 'bg-jeopardy-gold text-jeopardy-blue' : 'bg-slate-800/50'
-                  }`}
-                >
-                  <span className="font-bold text-xl w-8">#{i + 1}</span>
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: p.avatarColor }}
-                  />
-                  <span className="flex-1 font-bold">{p.name}</span>
-                  <span className="font-bold">${p.score.toLocaleString('pt-BR')}</span>
-                </motion.div>
-              ))}
+              .map((p, i) => {
+                const rankConfig = [
+                  { medal: '🥇', border: '#E8B84B', bg: 'rgba(232,184,75,0.15)', glow: '0 0 20px rgba(232,184,75,0.4)', textClass: 'text-jeopardy-gold', size: 'text-xl' },
+                  { medal: '🥈', border: '#94a3b8', bg: 'rgba(148,163,184,0.1)', glow: 'none', textClass: 'text-slate-300', size: 'text-lg' },
+                  { medal: '🥉', border: '#f97316', bg: 'rgba(249,115,22,0.1)', glow: 'none', textClass: 'text-orange-400', size: 'text-base' },
+                ][i] ?? { medal: `#${i+1}`, border: '#334155', bg: 'rgba(51,65,85,0.4)', glow: 'none', textClass: 'text-slate-400', size: 'text-base' };
+
+                return (
+                  <motion.div
+                    key={p.id}
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.12 }}
+                    className={`flex items-center gap-3 p-3 rounded-xl ${i === 0 ? 'animate-winner-shimmer' : ''}`}
+                    style={{
+                      borderLeft: `4px solid ${rankConfig.border}`,
+                      background: rankConfig.bg,
+                      boxShadow: rankConfig.glow,
+                    }}
+                  >
+                    <span className="text-xl w-8 text-center">{rankConfig.medal}</span>
+                    <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: p.avatarColor }} />
+                    <span className={`flex-1 font-ui font-bold ${rankConfig.textClass} ${rankConfig.size}`}>{p.name}</span>
+                    <span className={`font-mono font-bold ${rankConfig.textClass}`}>
+                      ${p.score.toLocaleString('pt-BR')}
+                    </span>
+                  </motion.div>
+                );
+              })}
           </div>
           <button
             className="btn-ghost mt-4"
-            onClick={() => { socket.disconnect(); navigate('/'); }}
+            onClick={() => { socket.disconnect(); resetGame(); setBuzzerPosition(null); navigate('/'); }}
           >
             ← Voltar ao Menu
           </button>
