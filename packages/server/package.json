@@ -9,6 +9,8 @@
     "dev": "tsx watch --env-file .env src/index.ts",
     "start": "node --env-file .env dist/index.js",
     "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -32,7 +34,9 @@
     "@types/node": "^22.13.4",
     "@types/qrcode": "^1.5.5",
     "@types/uuid": "^10.0.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
   }
 }

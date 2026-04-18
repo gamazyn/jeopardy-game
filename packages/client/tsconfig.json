@@ -15,5 +15,6 @@
       "@jeopardy/shared": ["../shared/src/index.ts"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/__tests__/**"]
 }
