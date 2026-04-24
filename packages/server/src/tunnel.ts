@@ -1,12 +1,10 @@
-import { PORT } from './config.js';
-
 let currentTunnelUrl: string | null = null;
 
-export async function startTunnel(): Promise<string | null> {
+export async function startTunnel(port: number): Promise<string | null> {
   try {
     // Importação dinâmica pois localtunnel é CommonJS
     const localtunnel = (await import('localtunnel')).default;
-    const tunnel = await localtunnel({ port: PORT });
+    const tunnel = await localtunnel({ port });
 
     currentTunnelUrl = tunnel.url;
     console.log(`[tunnel] URL pública: ${tunnel.url}`);

@@ -73,6 +73,17 @@ describe('host:create', () => {
     expect(result.sessionId).toHaveLength(6);
   });
 
+  it('retorna localUrl e tunnelUrl no ack', async () => {
+    const socket = makeMockSocket('host-socket');
+    const io = makeMockIo();
+    registerLobbyHandlers(io as any, socket as any);
+    let result: any;
+    socket.trigger('host:create', { gameConfigId: 'valid-game' }, (r: any) => { result = r; });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(result).toHaveProperty('localUrl');
+    expect(result).toHaveProperty('tunnelUrl');
+  });
+
   it('retorna erro para jogo inexistente', async () => {
     const socket = makeMockSocket('host-socket');
     const io = makeMockIo();
