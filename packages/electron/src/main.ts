@@ -44,8 +44,8 @@ async function startProductionServer(): Promise<number> {
   process.env.CLIENT_DIST_DIR = clientDistDir
 
   const serverBundlePath = app.isPackaged
-    ? path.join(process.resourcesPath, 'server-bundle.cjs')
-    : path.join(__dirname, '../resources/server-bundle.cjs')
+    ? path.join(process.resourcesPath, 'server-bundle.mjs')
+    : path.join(__dirname, '../resources/server-bundle.mjs')
 
   const { createApp } = (await import(pathToFileURL(serverBundlePath).href)) as {
     createApp: () => {

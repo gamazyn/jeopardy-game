@@ -6,7 +6,7 @@
   "main": "dist/main.js",
   "scripts": {
     "dev": "electron .",
-    "build:bundle": "esbuild ../server/dist/server.js --bundle --platform=node --format=cjs --outfile=resources/server-bundle.cjs --external:fsevents --external:bufferutil --external:utf-8-validate --external:canvas",
+    "build:bundle": "esbuild ../server/dist/server.js --bundle --platform=node --format=esm --outfile=resources/server-bundle.mjs --external:fsevents --external:bufferutil --external:utf-8-validate --external:canvas",
     "build:tsc": "tsc",
     "build": "pnpm build:bundle && pnpm build:tsc",
     "pack": "electron-builder --dir",
@@ -14,7 +14,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "clean": "rm -rf dist dist-electron resources/server-bundle.cjs"
+    "clean": "rm -rf dist dist-electron resources/server-bundle.mjs"
   },
   "dependencies": {
     "electron-updater": "^6.3.0"

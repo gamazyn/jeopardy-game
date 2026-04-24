@@ -18,8 +18,8 @@ extraResources:
     to: client-dist
     filter:
       - "**/*"
-  - from: resources/server-bundle.cjs
-    to: server-bundle.cjs
+  - from: resources/server-bundle.mjs
+    to: server-bundle.mjs
 
 win:
   target:
