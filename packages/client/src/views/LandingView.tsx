@@ -66,7 +66,7 @@ export function LandingView() {
               letterSpacing: '0.05em',
             }}
           >
-            JEOPARDY!
+            Responde Aí!
           </h1>
         </div>
         <p className="text-slate-400 font-ui tracking-widest text-sm uppercase">O quiz show com seus amigos</p>
