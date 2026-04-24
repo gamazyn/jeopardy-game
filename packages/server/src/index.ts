@@ -41,8 +41,8 @@ httpServer.listen(PORT, async () => {
     console.log(`   Local: http://${localIp}:${clientPort}`);
   }
 
-  // Tunnel para acesso remoto — mesma porta do cliente
-  const tunnelUrl = await startTunnel(clientPort);
+  // Tunnel aponta para Express (PORT) — Socket.IO vai direto sem duplo proxy
+  const tunnelUrl = await startTunnel(PORT);
   if (tunnelUrl) {
     setTunnelUrl(tunnelUrl);
     console.log(`   Remoto: ${tunnelUrl}`);

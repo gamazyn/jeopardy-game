@@ -1,5 +1,5 @@
 import express from 'express';
-import { createServer } from 'http';
+import { createServer, request as httpRequest } from 'http';
 import { Server } from 'socket.io';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -22,7 +22,7 @@ export function createApp(): { app: ReturnType<typeof express>; httpServer: Retu
       contentSecurityPolicy: false, // Desabilitar pois o client é servido pelo Vite em dev
     }),
   );
-  app.use(cors({ origin: CLIENT_URL }));
+  app.use(cors({ origin: NODE_ENV === 'production' ? CLIENT_URL : true }));
   app.use(express.json({ limit: '1mb' }));
   app.use('/api', apiLimiter);
 
@@ -55,10 +55,34 @@ export function createApp(): { app: ReturnType<typeof express>; httpServer: Retu
     });
   }
 
+  // Em dev, proxy de rotas SPA para o Vite — permite tunnel apontar pra Express (3000)
+  // sem quebrar Socket.IO com duplo proxy
+  if (NODE_ENV !== 'production') {
+    const vitePort = Number(new URL(CLIENT_URL).port) || 5173;
+    app.use((req, res, next) => {
+      if (
+        req.path.startsWith('/api') ||
+        req.path.startsWith('/media') ||
+        req.path.startsWith('/socket.io')
+      ) {
+        return next();
+      }
+      const proxy = httpRequest(
+        { hostname: 'localhost', port: vitePort, path: req.url, method: req.method, headers: { ...req.headers, host: `localhost:${vitePort}` } },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers);
+          proxyRes.pipe(res);
+        },
+      );
+      proxy.on('error', () => res.status(502).send('Vite dev server not running'));
+      req.pipe(proxy);
+    });
+  }
+
   const httpServer = createServer(app);
 
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-    cors: { origin: CLIENT_URL },
+    cors: { origin: NODE_ENV === 'production' ? CLIENT_URL : true },
     pingTimeout: 20000,
     pingInterval: 10000,
   });
