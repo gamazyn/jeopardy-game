@@ -1,6 +1,6 @@
 import type { Server, Socket } from 'socket.io';
-import type { ServerToClientEvents, ClientToServerEvents } from '@jeopardy/shared';
-import { sanitizeAnswer } from '@jeopardy/shared';
+import type { ServerToClientEvents, ClientToServerEvents } from '@responde-ai/shared';
+import { sanitizeAnswer } from '@responde-ai/shared';
 import { getSession, updateSession } from '../managers/sessionManager.js';
 import { validateHostToken } from '../middleware/authMiddleware.js';
 import { canTransition } from '../managers/gameStateManager.js';

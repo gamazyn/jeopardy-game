@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import type { GameConfig } from '@jeopardy/shared';
+import type { GameConfig } from '@responde-ai/shared';
 
 // Override GAMES_DIR com diretório temporário
 let tmpDir: string;

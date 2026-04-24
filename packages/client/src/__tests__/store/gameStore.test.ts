@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../../store/gameStore.js';
-import type { GameConfig, Player, ActiveQuestion } from '@jeopardy/shared';
+import type { GameConfig, Player, ActiveQuestion } from '@responde-ai/shared';
 
 function makeConfig(): Omit<GameConfig, 'finalChallengeAnswer'> {
   return {

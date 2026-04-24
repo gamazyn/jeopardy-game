@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 const randomUUID = () => crypto.randomUUID();
-import type { GameConfig, Category, Question, MediaAsset } from '@jeopardy/shared';
+import type { GameConfig, Category, Question, MediaAsset } from '@responde-ai/shared';
 
 const DEFAULT_VALUES = [100, 200, 300, 400, 500];
 const FINAL_IDX = -1;

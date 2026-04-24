@@ -1,5 +1,5 @@
 import type { Server, Socket } from 'socket.io';
-import type { ServerToClientEvents, ClientToServerEvents, BuzzerEntry } from '@jeopardy/shared';
+import type { ServerToClientEvents, ClientToServerEvents, BuzzerEntry } from '@responde-ai/shared';
 import { getSession, updateSession } from '../managers/sessionManager.js';
 import { validateHostToken } from '../middleware/authMiddleware.js';
 import { socketRateLimit } from '../middleware/rateLimiter.js';

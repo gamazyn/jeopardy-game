@@ -1,4 +1,4 @@
-import type { GamePhase } from '@jeopardy/shared';
+import type { GamePhase } from '@responde-ai/shared';
 
 // Transições válidas da state machine
 const VALID_TRANSITIONS: Record<GamePhase, GamePhase[]> = {

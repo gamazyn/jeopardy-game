@@ -12,7 +12,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "paths": {
-      "@jeopardy/shared": ["../shared/src/index.ts"]
+      "@responde-ai/shared": ["../shared/src/index.ts"]
     }
   },
   "include": ["src"],

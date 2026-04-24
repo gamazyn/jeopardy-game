@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { ServerToClientEvents, ClientToServerEvents } from '@jeopardy/shared';
+import type { ServerToClientEvents, ClientToServerEvents } from '@responde-ai/shared';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? '';
 

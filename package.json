@@ -1,5 +1,5 @@
 {
-  "name": "jeopardy-game",
+  "name": "responde-ai",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,9 +10,9 @@
     "test": "turbo run test",
     "clean": "turbo run clean",
     "seed": "tsx scripts/seed.ts",
-    "electron:dev": "pnpm --filter @jeopardy/electron dev",
+    "electron:dev": "pnpm --filter @responde-ai/electron dev",
     "electron:build": "turbo run build",
-    "electron:dist": "turbo run build && pnpm --filter @jeopardy/electron dist"
+    "electron:dist": "turbo run build && pnpm --filter @responde-ai/electron dist"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.5",

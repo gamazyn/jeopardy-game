@@ -1,5 +1,5 @@
 {
-  "name": "@jeopardy/client",
+  "name": "@responde-ai/client",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@jeopardy/shared": "workspace:*",
+    "@responde-ai/shared": "workspace:*",
     "framer-motion": "^11.18.2",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",

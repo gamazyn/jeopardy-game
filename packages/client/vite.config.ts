@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@jeopardy/shared': resolve(__dirname, '../shared/src/index.ts'),
+      '@responde-ai/shared': resolve(__dirname, '../shared/src/index.ts'),
     },
   },
   server: {

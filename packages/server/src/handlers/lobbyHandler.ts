@@ -1,7 +1,7 @@
 import type { Server, Socket } from 'socket.io';
 import { randomUUID } from 'crypto';
-import type { ServerToClientEvents, ClientToServerEvents } from '@jeopardy/shared';
-import { sanitizePlayerName, generateJoinCode, isValidJoinCode } from '@jeopardy/shared';
+import type { ServerToClientEvents, ClientToServerEvents } from '@responde-ai/shared';
+import { sanitizePlayerName, generateJoinCode, isValidJoinCode } from '@responde-ai/shared';
 import { generateHostToken } from '../middleware/authMiddleware.js';
 import { createSession, getSession, updateSession, getSessionByPlayerId } from '../managers/sessionManager.js';
 import { loadGame } from '../storage/fileStorage.js';

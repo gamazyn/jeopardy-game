@@ -1,5 +1,5 @@
 {
-  "name": "@jeopardy/electron",
+  "name": "@responde-ai/electron",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -20,8 +20,8 @@
     "electron-updater": "^6.3.0"
   },
   "devDependencies": {
-    "@jeopardy/client": "workspace:*",
-    "@jeopardy/server": "workspace:*",
+    "@responde-ai/client": "workspace:*",
+    "@responde-ai/server": "workspace:*",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^4.1.4",
     "esbuild": "^0.25.0",

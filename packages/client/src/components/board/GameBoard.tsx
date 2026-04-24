@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import type { Category } from '@jeopardy/shared';
+import type { Category } from '@responde-ai/shared';
 
 interface Props {
   categories: Category[];

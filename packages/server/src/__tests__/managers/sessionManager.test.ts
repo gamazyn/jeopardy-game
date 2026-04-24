@@ -8,7 +8,7 @@ import {
   getSessionByPlayerId,
   cleanupExpiredSessions,
 } from '../../managers/sessionManager.js';
-import type { GameSession } from '@jeopardy/shared';
+import type { GameSession } from '@responde-ai/shared';
 
 vi.mock('../../config.js', () => ({
   SESSION_TTL_MS: 4 * 60 * 60 * 1000,

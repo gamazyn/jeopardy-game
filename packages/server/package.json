@@ -1,5 +1,5 @@
 {
-  "name": "@jeopardy/server",
+  "name": "@responde-ai/server",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@jeopardy/shared": "workspace:*",
+    "@responde-ai/shared": "workspace:*",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",

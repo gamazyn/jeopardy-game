@@ -6,7 +6,7 @@ import type {
   ActiveQuestion,
   BuzzerEntry,
   ChallengeState,
-} from '@jeopardy/shared';
+} from '@responde-ai/shared';
 
 interface TimerState {
   remainingMs: number;
