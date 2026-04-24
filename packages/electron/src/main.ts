@@ -88,7 +88,6 @@ async function createWindow(): Promise<void> {
     await win.loadURL(`http://localhost:${port}`)
   } else {
     await win.loadURL('http://localhost:5173')
-    win.webContents.openDevTools()
   }
 }
 

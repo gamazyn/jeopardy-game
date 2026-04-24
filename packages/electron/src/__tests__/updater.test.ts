@@ -21,7 +21,7 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('electron-updater', () => ({
-  autoUpdater: mockAutoUpdater,
+  default: { autoUpdater: mockAutoUpdater },
 }))
 
 // Flush Promise microtasks without relying on setTimeout (safe with fake timers)
