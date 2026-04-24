@@ -12,8 +12,48 @@ Quiz show customizável para jogar online com seus amigos. O host controla o boa
 - **Mídia** — imagens e áudio nas questões e categorias
 - **QR Code** — jogadores escaneiam e entram direto na sala, sem digitar código
 - **Acesso remoto** — tunnel automático via localtunnel, sem configuração
+- **App desktop** — versão Electron para Windows, Mac e Linux
 
-## Requisitos
+## Download
+
+Baixe o instalador mais recente na página de [Releases](https://github.com/gamazyn/responde-ai/releases):
+
+| Plataforma | Arquivo |
+|---|---|
+| Windows | `responde-ai-*-x64.exe` (instalador) |
+| macOS (Apple Silicon) | `responde-ai-*-arm64.zip` |
+| macOS (Intel) | `responde-ai-*-x64.zip` |
+| Linux | `responde-ai-*-x86_64.AppImage` |
+
+> **Nota sobre segurança:** os binários não são assinados com certificado digital pago. Veja as instruções abaixo para cada plataforma.
+
+### Windows
+
+O SmartScreen pode exibir um aviso ao abrir o instalador. Para prosseguir:
+
+1. Clique em **Mais informações**
+2. Clique em **Executar assim mesmo**
+
+### macOS
+
+O Gatekeeper bloqueará a abertura na primeira vez. Para liberar o app:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Responde\ Aí\!.app
+```
+
+Ou, alternativamente: clique com o botão direito no app → **Abrir** → **Abrir** na janela de confirmação.
+
+### Linux
+
+Torne o AppImage executável e execute diretamente:
+
+```sh
+chmod +x responde-ai-*.AppImage
+./responde-ai-*.AppImage
+```
+
+## Requisitos (modo dev)
 
 - [Node.js](https://nodejs.org) v20+
 - [pnpm](https://pnpm.io) v9+
@@ -45,6 +85,14 @@ pnpm dev
 Isso inicia o servidor (`:3000`) e o cliente (`:5173`) em paralelo.
 
 Acesse **http://localhost:5173** no browser.
+
+### App Electron em desenvolvimento
+
+Com o `pnpm dev` rodando, abra outro terminal:
+
+```bash
+pnpm electron:dev
+```
 
 ## Como jogar
 
@@ -83,7 +131,8 @@ responde-ai/
 ├── packages/
 │   ├── shared/     # Tipos TypeScript e utilitários compartilhados
 │   ├── server/     # Backend Node.js + Express + Socket.io
-│   └── client/     # Frontend React + Vite + Tailwind
+│   ├── client/     # Frontend React + Vite + Tailwind
+│   └── electron/   # App desktop (Electron + auto-updater)
 ```
 
 ## Stack
@@ -92,6 +141,7 @@ responde-ai/
 |---|---|
 | Frontend | React 18 + TypeScript + Vite + Tailwind + Framer Motion |
 | Backend | Node.js + Express + Socket.io |
+| Desktop | Electron + electron-builder + electron-updater |
 | Monorepo | pnpm workspaces + Turborepo |
 | Tunnel | localtunnel |
 
@@ -100,8 +150,10 @@ responde-ai/
 | Comando | Descrição |
 |---|---|
 | `pnpm dev` | Inicia server + client em modo dev |
+| `pnpm electron:dev` | Abre janela Electron (requer `pnpm dev` rodando) |
 | `pnpm build` | Build de produção |
 | `pnpm type-check` | Checa tipos em todos os packages |
+| `pnpm test` | Roda todos os testes |
 | `pnpm seed` | Importa os jogos de exemplo de `samples/` para `data/` |
 
 ## Licença
