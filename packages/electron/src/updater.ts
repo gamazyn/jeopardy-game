@@ -1,5 +1,7 @@
 import { dialog, app } from 'electron'
-import { autoUpdater, type UpdateInfo } from 'electron-updater'
+import electronUpdater, { type UpdateInfo } from 'electron-updater'
+
+const { autoUpdater } = electronUpdater
 
 export function initUpdater(): void {
   if (!app.isPackaged) return
