@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { saveGame, loadGame, listGames, deleteGame } from '../storage/fileStorage.js';
-import type { GameConfig } from '@jeopardy/shared';
+import type { GameConfig } from '@responde-ai/shared';
 
 export const gameRouter: IRouter = Router();
 

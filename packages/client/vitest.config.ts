@@ -12,7 +12,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@jeopardy/shared': new URL('../shared/src/index.ts', import.meta.url).pathname,
+      '@responde-ai/shared': new URL('../shared/src/index.ts', import.meta.url).pathname,
     },
   },
 });

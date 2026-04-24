@@ -104,7 +104,7 @@ export function PlayerGameView() {
   if (!gameConfig) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center p-6 gap-6 overflow-y-auto">
-        <h1 className="text-5xl font-bold text-jeopardy-gold tracking-wider">JEOPARDY!</h1>
+        <h1 className="text-5xl font-bold text-jeopardy-gold tracking-wider">Responde Aí!</h1>
         <div className="card text-center max-w-sm w-full">
           <div className="text-4xl mb-4">⏳</div>
           <p className="text-lg font-bold mb-1">{myName}</p>

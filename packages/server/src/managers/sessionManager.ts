@@ -1,4 +1,4 @@
-import type { GameSession, GamePhase } from '@jeopardy/shared';
+import type { GameSession, GamePhase } from '@responde-ai/shared';
 import { SESSION_TTL_MS } from '../config.js';
 
 const sessions = new Map<string, GameSession>();

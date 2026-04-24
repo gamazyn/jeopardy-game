@@ -48,7 +48,7 @@ export function JoinView() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-8">
       <div className="text-center">
-        <h1 className="text-5xl font-bold text-jeopardy-gold tracking-wider mb-2">JEOPARDY!</h1>
+        <h1 className="text-5xl font-bold text-jeopardy-gold tracking-wider mb-2">Responde Aí!</h1>
         <p className="text-slate-400 text-sm">Sala</p>
         <p className="text-3xl font-bold tracking-widest mt-1">{sessionId?.toUpperCase()}</p>
       </div>

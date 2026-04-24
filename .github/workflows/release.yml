@@ -5,9 +5,69 @@ on:
     tags:
       - 'v*.*.*'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  release:
-    name: Create release
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+
+  electron:
+    name: Electron — ${{ matrix.os }}
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.2.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Cache Electron binary
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/AppData/Local/electron/Cache
+            ~/.cache/electron
+            ~/Library/Caches/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('packages/electron/package.json') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Package & publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: pnpm --filter @responde-ai/electron exec electron-builder --publish always
+
+  server-package:
+    name: Server package
+    needs: create-release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -29,18 +89,15 @@ jobs:
       - name: Build all packages
         run: pnpm build
 
-      - name: Package release
+      - name: Package server artifact
         run: |
           mkdir -p release/packages
           cp -r packages/server/dist release/packages/server
           cp -r packages/client/dist release/packages/client
           cp packages/server/package.json release/packages/server/package.json
           cp package.json pnpm-lock.yaml pnpm-workspace.yaml release/
-          tar -czf jeopardy-game-${{ github.ref_name }}.tar.gz -C release .
+          tar -czf server-${{ github.ref_name }}.tar.gz -C release .
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
-          generate_release_notes: true
-          files: jeopardy-game-${{ github.ref_name }}.tar.gz
+          files: server-${{ github.ref_name }}.tar.gz

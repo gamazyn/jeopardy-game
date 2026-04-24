@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Player } from '@jeopardy/shared';
+import type { Player } from '@responde-ai/shared';
 
 interface Props {
   players: Player[];

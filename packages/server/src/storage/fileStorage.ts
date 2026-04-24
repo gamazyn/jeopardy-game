@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir, readdir, rm, stat } from 'fs/promises';
 import { resolve } from 'path';
 import { GAMES_DIR } from '../config.js';
-import type { GameConfig } from '@jeopardy/shared';
+import type { GameConfig } from '@responde-ai/shared';
 
 async function ensureDir(dir: string): Promise<void> {
   await mkdir(dir, { recursive: true });

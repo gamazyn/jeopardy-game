@@ -1,0 +1,37 @@
+appId: com.gamazyn.responde-ai
+productName: "Responde Aí!"
+copyright: "Copyright © 2025 gamazyn"
+
+publish:
+  provider: github
+  owner: gamazyn
+  repo: responde-ai
+
+directories:
+  output: dist-electron
+
+files:
+  - dist/**
+
+extraResources:
+  - from: ../client/dist
+    to: client-dist
+    filter:
+      - "**/*"
+  - from: resources/server-bundle.mjs
+    to: server-bundle.mjs
+
+win:
+  target:
+    - target: portable
+      arch: [x64]
+
+mac:
+  target:
+    - target: zip
+      arch: [x64, arm64]
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
