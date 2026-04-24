@@ -1,6 +1,6 @@
-# Jeopardy!
+# Responde Aí!
 
-Jeopardy customizável para jogar online com seus amigos. O host controla o board numa tela grande enquanto os jogadores se conectam pelo celular ou PC para apertar o buzzer.
+Quiz show customizável para jogar online com seus amigos. O host controla o board numa tela grande enquanto os jogadores se conectam pelo celular ou PC para apertar o buzzer.
 
 ## Funcionalidades
 
@@ -9,7 +9,8 @@ Jeopardy customizável para jogar online com seus amigos. O host controla o boar
 - **Questões especiais** — Todos Jogam, Desafie um Jogador, Dupla Aposta
 - **Desafio Final** — apostas em segredo, revelação dramática pelo host
 - **Timer** — 60s padrão, com pause, extensão e valor customizado
-- **Mídia** — imagens nas questões e categorias
+- **Mídia** — imagens e áudio nas questões e categorias
+- **QR Code** — jogadores escaneiam e entram direto na sala, sem digitar código
 - **Acesso remoto** — tunnel automático via localtunnel, sem configuração
 
 ## Requisitos
@@ -20,8 +21,8 @@ Jeopardy customizável para jogar online com seus amigos. O host controla o boar
 ## Instalação
 
 ```bash
-git clone https://github.com/gamazyn/jeopardy-game
-cd jeopardy-game
+git clone https://github.com/gamazyn/responde-ai
+cd responde-ai
 pnpm install
 ```
 
@@ -58,14 +59,14 @@ Acesse **http://localhost:5173** no browser.
 
 1. Na tela inicial, clique em **Hospedar Jogo**
 2. Selecione o jogo criado e clique em **Criar Sala**
-3. Compartilhe o **código de 6 letras** ou o **link do tunnel** com seus amigos
+3. Compartilhe o **QR Code** (mesma rede) ou o **link remoto** com seus amigos
 4. Quando todos entrarem, clique em **Iniciar Jogo**
 
 ### 3. Entrar como jogador
 
-1. Acesse o link compartilhado pelo host (ou abra o app manualmente)
-2. Digite seu nome e o código da sala
-3. Aguarde o host iniciar
+- **QR Code** — escaneie com a câmera, digite o nome e entre direto
+- **Link remoto** — acesse o link compartilhado pelo host
+- **Manualmente** — abra o app, digite seu nome e o código de 6 letras
 
 ### 4. Fluxo do jogo
 
@@ -78,7 +79,7 @@ Acesse **http://localhost:5173** no browser.
 ## Estrutura do Projeto
 
 ```
-jeopardy-game/
+responde-ai/
 ├── packages/
 │   ├── shared/     # Tipos TypeScript e utilitários compartilhados
 │   ├── server/     # Backend Node.js + Express + Socket.io
