@@ -31,17 +31,18 @@ const { httpServer } = createApp();
 httpServer.listen(PORT, async () => {
   console.log(`\n🃏 Jeopardy Server rodando na porta ${PORT}`);
 
-  // IP local para acesso na mesma rede — porta do cliente
+  // Em dev expõe Vite (5173), em prod expõe Express (PORT)
+  const clientPort = getClientPort();
+
+  // IP local para acesso na mesma rede
   const localIp = getLocalIp();
   if (localIp) {
-    const clientPort = getClientPort();
-    const url = `http://${localIp}:${clientPort}`;
-    setLocalUrl(url);
-    console.log(`   Local: ${url}`);
+    setLocalUrl(`http://${localIp}:${clientPort}`);
+    console.log(`   Local: http://${localIp}:${clientPort}`);
   }
 
-  // Iniciar tunnel para acesso remoto
-  const tunnelUrl = await startTunnel();
+  // Tunnel para acesso remoto — mesma porta do cliente
+  const tunnelUrl = await startTunnel(clientPort);
   if (tunnelUrl) {
     setTunnelUrl(tunnelUrl);
     console.log(`   Remoto: ${tunnelUrl}`);
