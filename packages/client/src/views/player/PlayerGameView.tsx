@@ -34,12 +34,29 @@ export function PlayerGameView() {
   const [doubleWagerInput, setDoubleWagerInput] = useState('');
   const [doubleWagerSent, setDoubleWagerSent] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUnlocked = useRef(false);
   // Callback ref que ignora null: evita que a exit animation do AnimatePresence
   // sobrescreva o ref com null depois do novo elemento já ter sido registrado.
   const audioCallbackRef = useCallback((el: HTMLAudioElement | null) => {
     if (el !== null) audioRef.current = el;
   }, []);
   useSocketEvents();
+
+  // Desbloqueia autoplay no primeiro gesto do usuário (obrigatório em mobile)
+  useEffect(() => {
+    function unlock() {
+      if (audioUnlocked.current) return;
+      audioUnlocked.current = true;
+      const silent = new Audio();
+      silent.play().catch(() => {});
+    }
+    window.addEventListener('touchstart', unlock, { once: true });
+    window.addEventListener('click', unlock, { once: true });
+    return () => {
+      window.removeEventListener('touchstart', unlock);
+      window.removeEventListener('click', unlock);
+    };
+  }, []);
 
   useEffect(() => {
     function handleAudioSync({ action, currentTime }: { action: 'play' | 'pause' | 'seek'; currentTime: number }) {
