@@ -1,0 +1,31 @@
+{
+  "name": "@jeopardy/electron",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build:bundle": "esbuild ../server/dist/server.js --bundle --platform=node --format=cjs --outfile=resources/server-bundle.cjs --external:fsevents --external:bufferutil --external:utf-8-validate --external:canvas",
+    "build:tsc": "tsc",
+    "build": "pnpm build:bundle && pnpm build:tsc",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist dist-electron resources/server-bundle.cjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.4",
+    "esbuild": "^0.25.0",
+    "electron": "^35.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

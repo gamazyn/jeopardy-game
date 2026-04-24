@@ -48,7 +48,7 @@ export function createApp(): { app: ReturnType<typeof express>; httpServer: Retu
 
   // Em produção, servir o client buildado
   if (NODE_ENV === 'production') {
-    const clientDist = resolve(process.cwd(), '../client/dist');
+    const clientDist = process.env.CLIENT_DIST_DIR ?? resolve(process.cwd(), '../client/dist');
     app.use(express.static(clientDist));
     app.get('*', (_req, res) => {
       res.sendFile(resolve(clientDist, 'index.html'));

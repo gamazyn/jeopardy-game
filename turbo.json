@@ -20,6 +20,10 @@
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
+    "@jeopardy/electron#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "clean": {
       "cache": false
     }

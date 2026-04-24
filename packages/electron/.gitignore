@@ -1,0 +1,4 @@
+dist/
+dist-electron/
+resources/
+node_modules/
