@@ -40,6 +40,14 @@ export function PlayerGameView() {
   const audioCallbackRef = useCallback((el: HTMLAudioElement | null) => {
     if (el !== null) audioRef.current = el;
   }, []);
+
+  // Callback ref que monta e já chama play() — necessário em mobile onde autoPlay é bloqueado
+  const autoPlayCallbackRef = useCallback((el: HTMLAudioElement | null) => {
+    if (el !== null) {
+      audioRef.current = el;
+      el.play().catch(() => {});
+    }
+  }, []);
   useSocketEvents();
 
   // Desbloqueia autoplay no primeiro gesto do usuário (obrigatório em mobile)
@@ -245,9 +253,8 @@ export function PlayerGameView() {
             {activeQuestion.question.clueAudio && (
               <audio
                 key={activeQuestion.question.clueAudio.filename}
-                ref={audioCallbackRef}
+                ref={autoPlayCallbackRef}
                 src={`/media/${gameConfig.id}/${activeQuestion.question.clueAudio.filename}`}
-                autoPlay
               />
             )}
 
@@ -354,9 +361,8 @@ export function PlayerGameView() {
           {activeQuestion.question.answerAudio && (
             <audio
               key={activeQuestion.question.answerAudio.filename}
-              ref={audioCallbackRef}
+              ref={autoPlayCallbackRef}
               src={`/media/${gameConfig.id}/${activeQuestion.question.answerAudio.filename}`}
-              autoPlay
             />
           )}
 
