@@ -55,10 +55,24 @@ describe('canTransition', () => {
   });
 
   it('game_over não tem transições válidas', () => {
-    const phases: GamePhase[] = ['lobby', 'board', 'question', 'buzzer_queue', 'all_play', 'double_wager', 'answer_reveal', 'final_challenge', 'final_reveal', 'game_over'];
+    const phases: GamePhase[] = ['lobby', 'board', 'question', 'buzzer_queue', 'all_play', 'double_wager', 'answer_reveal', 'final_challenge', 'final_reveal', 'game_over', 'speed_round'];
     for (const phase of phases) {
       expect(canTransition('game_over', phase)).toBe(false);
     }
+  });
+
+  it('board → speed_round', () => {
+    expect(canTransition('board', 'speed_round')).toBe(true);
+  });
+
+  it('speed_round → answer_reveal e board', () => {
+    expect(canTransition('speed_round', 'answer_reveal')).toBe(true);
+    expect(canTransition('speed_round', 'board')).toBe(true);
+    expect(canTransition('speed_round', 'question')).toBe(false);
+  });
+
+  it('all_play → all_play (reabertura após bloqueio parcial)', () => {
+    expect(canTransition('all_play', 'all_play')).toBe(true);
   });
 });
 

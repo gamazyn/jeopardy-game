@@ -1,6 +1,6 @@
 import type { GameConfig, MediaAsset } from './game.js';
 import type { Player } from './player.js';
-import type { ActiveQuestion, BuzzerEntry, GamePhase, ChallengeState } from './state.js';
+import type { ActiveQuestion, BuzzerEntry, GamePhase, ChallengeState, SpeedRoundCorrect } from './state.js';
 
 // ============================================================
 // CLIENT → SERVER
@@ -124,6 +124,12 @@ export interface C2S_HostSetChallenge {
   sessionId: string;
   hostToken: string;
   challengedId: string;
+}
+
+// Speed Round: player envia resposta por texto
+export interface C2S_PlayerSpeedAnswer {
+  sessionId: string;
+  answer: string;
 }
 
 // ============================================================
@@ -259,6 +265,12 @@ export interface S2C_ChallengeAssigned {
   challengeState: ChallengeState;
 }
 
+// Speed Round: player acertou — broadcast com ranking atual
+export interface S2C_SpeedAnswered {
+  correct: SpeedRoundCorrect[];  // lista completa até agora (rank 1, 2, 3)
+  phase: GamePhase;              // 'speed_round' enquanto aberto, 'answer_reveal' quando encerrou
+}
+
 // ============================================================
 // Mapa de eventos tipados para uso no Socket.io
 // ============================================================
@@ -288,6 +300,7 @@ export interface ServerToClientEvents {
   'double:started': (data: S2C_DoubleStarted) => void;
   'double:wagerLocked': (data: S2C_DoubleWagerLocked) => void;
   'challenge:assigned': (data: S2C_ChallengeAssigned) => void;
+  'speed:answered': (data: S2C_SpeedAnswered) => void;
 }
 
 export interface ClientToServerEvents {
@@ -311,4 +324,5 @@ export interface ClientToServerEvents {
   'host:assignDouble': (data: C2S_HostAssignDouble) => void;
   'player:doubleWager': (data: C2S_PlayerDoubleWager) => void;
   'host:setChallenge': (data: C2S_HostSetChallenge) => void;
+  'player:speedAnswer': (data: C2S_PlayerSpeedAnswer) => void;
 }

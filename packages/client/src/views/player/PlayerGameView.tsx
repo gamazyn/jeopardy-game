@@ -33,6 +33,7 @@ export function PlayerGameView() {
   const [wagerAnswer, setWagerAnswer] = useState('');
   const [doubleWagerInput, setDoubleWagerInput] = useState('');
   const [doubleWagerSent, setDoubleWagerSent] = useState(false);
+  const [speedInput, setSpeedInput] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUnlocked = useRef(false);
   // Callback ref que ignora null: evita que a exit animation do AnimatePresence
@@ -101,6 +102,13 @@ export function PlayerGameView() {
     setDoubleWagerSent(true);
   }
 
+  function submitSpeedAnswer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sessionId || !speedInput.trim()) return;
+    socket.emit('player:speedAnswer', { sessionId, answer: speedInput.trim() });
+    setSpeedInput(''); // limpar para nova tentativa
+  }
+
   if (!gameConfig) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center p-6 gap-6 overflow-y-auto">
@@ -131,7 +139,11 @@ export function PlayerGameView() {
   }
 
   const isDoubleAndNotAssigned = activeQuestion?.question.type === 'double' && doublePlayerId && doublePlayerId !== myId;
-  const canBuzz = (phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !buzzerPosition && !isDoubleAndNotAssigned;
+  const isLockedAllPlay = phase === 'all_play' && activeQuestion?.lockedPlayerIds?.includes(myId ?? '');
+  const canBuzz = (phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !buzzerPosition && !isDoubleAndNotAssigned && !isLockedAllPlay;
+
+  // speed_round: meu acerto (se houver)
+  const mySpeedEntry = activeQuestion?.speedRoundCorrect?.find((e) => e.playerId === myId);
 
   return (
     <div className="fixed inset-0 flex flex-col p-3 gap-2 overflow-hidden">
@@ -231,7 +243,8 @@ export function PlayerGameView() {
           >
             <div className="text-jeopardy-gold text-xl">
               ${activeQuestion.question.value}
-              {phase === 'all_play' && <span className="ml-3 text-sm bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">TODOS JOGAM</span>}
+              {phase === 'all_play' && !isLockedAllPlay && <span className="ml-3 text-sm bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">TODOS JOGAM</span>}
+              {isLockedAllPlay && <span className="ml-3 text-sm bg-red-600 text-white px-2 py-0.5 rounded font-bold">🚫 BLOQUEADO</span>}
               {activeQuestion.question.type === 'double' && doubleWager !== null && <span className="ml-3 text-sm bg-purple-500 text-white px-2 py-0.5 rounded font-bold">DUPLA APOSTA ${doubleWager}</span>}
             </div>
 
@@ -367,6 +380,80 @@ export function PlayerGameView() {
           )}
 
           <p className="text-slate-500 text-sm animate-pulse">Aguardando o host continuar...</p>
+        </motion.div>
+      )}
+
+      {/* Rodada Rápida */}
+      {phase === 'speed_round' && activeQuestion && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto"
+        >
+          <div className="font-arcade text-base text-green-400 tracking-widest">⚡ RODADA RÁPIDA</div>
+          <div className="text-jeopardy-gold text-xl">${activeQuestion.question.value}</div>
+
+          {activeQuestion.question.media && (
+            <img
+              src={`/media/${gameConfig.id}/${activeQuestion.question.media.filename}`}
+              alt=""
+              className="max-h-40 object-contain rounded-xl"
+            />
+          )}
+
+          <p className="text-xl md:text-3xl font-bold text-center leading-tight max-w-2xl">
+            {activeQuestion.question.clue}
+          </p>
+
+          {timer && (
+            <div className="w-full max-w-md">
+              <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
+            </div>
+          )}
+
+          {/* Feed de acertos ao vivo */}
+          {(activeQuestion.speedRoundCorrect?.length ?? 0) > 0 && (
+            <div className="w-full max-w-md flex flex-col gap-1">
+              {activeQuestion.speedRoundCorrect!.map((entry) => (
+                <div
+                  key={entry.playerId}
+                  className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm ${entry.playerId === myId ? 'bg-green-600/30 border border-green-500/40' : 'bg-slate-800/40'}`}
+                >
+                  <span className="font-mono text-jeopardy-gold font-bold w-5">#{entry.rank}</span>
+                  <span className="font-bold flex-1">{entry.playerName}</span>
+                  <span className="text-green-400 font-mono">+${entry.scoreChange}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Input de resposta */}
+          {mySpeedEntry ? (
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="text-4xl">✅</div>
+              <p className="font-arcade text-green-400 tracking-wider">ACERTOU!</p>
+              <p className="text-slate-400 text-sm">#{mySpeedEntry.rank} — +${mySpeedEntry.scoreChange} pts</p>
+            </div>
+          ) : (
+            <form onSubmit={submitSpeedAnswer} className="flex gap-2 w-full max-w-md">
+              <input
+                type="text"
+                value={speedInput}
+                onChange={(e) => setSpeedInput(e.target.value)}
+                maxLength={200}
+                autoFocus
+                className="flex-1 bg-jeopardy-blue-light border-2 border-slate-600 focus:border-jeopardy-gold rounded-lg px-4 py-3 text-white text-lg focus:outline-none transition-colors"
+                placeholder="Digite sua resposta..."
+              />
+              <button
+                type="submit"
+                disabled={!speedInput.trim()}
+                className="btn-primary px-5 text-lg disabled:opacity-40"
+              >
+                ↵
+              </button>
+            </form>
+          )}
         </motion.div>
       )}
 

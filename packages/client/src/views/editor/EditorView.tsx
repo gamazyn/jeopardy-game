@@ -7,10 +7,11 @@ const DEFAULT_VALUES = [100, 200, 300, 400, 500];
 const FINAL_IDX = -1;
 
 const TYPE_META: Record<Question['type'], { label: string; color: string; bg: string }> = {
-  standard:  { label: 'Normal',       color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
-  all_play:  { label: 'Todos Jogam',  color: '#facc15', bg: 'rgba(250,204,21,0.12)'  },
-  challenge: { label: 'Desafio',      color: '#fb923c', bg: 'rgba(251,146,60,0.12)'  },
-  double:    { label: 'Dupla Aposta', color: '#c084fc', bg: 'rgba(192,132,252,0.12)' },
+  standard:    { label: 'Normal',          color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  all_play:    { label: 'Todos Jogam',     color: '#facc15', bg: 'rgba(250,204,21,0.12)'  },
+  challenge:   { label: 'Desafio',         color: '#fb923c', bg: 'rgba(251,146,60,0.12)'  },
+  double:      { label: 'Dupla Aposta',    color: '#c084fc', bg: 'rgba(192,132,252,0.12)' },
+  speed_round: { label: 'Rodada Rápida',   color: '#4ade80', bg: 'rgba(74,222,128,0.12)'  },
 };
 
 function emptyQuestion(value: number): Question {
@@ -512,15 +513,15 @@ export function EditorView() {
                     )}
                   </div>
 
-                  {/* Challenge target */}
+                  {/* Challenge target — dica visível ao host durante o duelo */}
                   {q.type === 'challenge' && (
                     <div className="flex flex-col gap-2">
                       <label className="font-mono text-xs uppercase tracking-widest font-bold" style={{ color: '#fb923c' }}>
-                        Alvo do Desafio
+                        Dica de Alvo <span className="font-ui normal-case text-slate-500 ml-1">(visível só ao host, opcional)</span>
                       </label>
                       <input
                         type="text"
-                        placeholder="Ex: jogador com mais pontos (opcional)"
+                        placeholder="Ex: quem tem mais pontos, o mais novo, etc."
                         value={q.challengeTarget ?? ''}
                         onChange={(e) => updateQuestion(selectedCat, selectedQ, { challengeTarget: e.target.value || undefined })}
                         className="editor-input font-ui text-sm"
@@ -651,6 +652,39 @@ export function EditorView() {
                       className="editor-input font-ui text-sm"
                       style={{ color: '#cbd5e1' }}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="font-mono text-xs uppercase tracking-widest font-bold text-slate-400">
+                        Tempo de Aposta <span className="font-ui normal-case text-slate-500">(s)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={300}
+                        placeholder="60"
+                        value={game.finalChallengeWagerSeconds ?? ''}
+                        onChange={(e) => setGame((g) => ({ ...g, finalChallengeWagerSeconds: parseInt(e.target.value) || undefined }))}
+                        className="editor-input font-mono text-sm"
+                        style={{ color: '#cbd5e1' }}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="font-mono text-xs uppercase tracking-widest font-bold text-slate-400">
+                        Tempo de Resposta <span className="font-ui normal-case text-slate-500">(s)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={300}
+                        placeholder="60"
+                        value={game.finalChallengeAnswerSeconds ?? ''}
+                        onChange={(e) => setGame((g) => ({ ...g, finalChallengeAnswerSeconds: parseInt(e.target.value) || undefined }))}
+                        className="editor-input font-mono text-sm"
+                        style={{ color: '#cbd5e1' }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

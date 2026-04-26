@@ -12,7 +12,8 @@ export type GamePhase =
   | 'answer_reveal'
   | 'final_challenge'
   | 'final_reveal'
-  | 'game_over';
+  | 'game_over'
+  | 'speed_round';
 
 export interface ChallengeState {
   challengerId: string;
@@ -28,6 +29,14 @@ export interface BuzzerEntry {
   responded: boolean;
 }
 
+export interface SpeedRoundCorrect {
+  playerId: string;
+  playerName: string;
+  scoreChange: number;
+  rank: number; // 1, 2, 3
+  timestamp: number;
+}
+
 export interface ActiveQuestion {
   categoryId: string;
   questionId: string;
@@ -36,6 +45,8 @@ export interface ActiveQuestion {
   timerDuration: number;
   timerPausedAt?: number;
   timerRemainingMs?: number;
+  lockedPlayerIds?: string[];       // all_play: players bloqueados por erro
+  speedRoundCorrect?: SpeedRoundCorrect[]; // speed_round: quem acertou em ordem
 }
 
 export interface GameSession {

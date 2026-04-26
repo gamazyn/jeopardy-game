@@ -30,10 +30,11 @@ export function emitFinalChallengeStart(
   const session = getSession(sessionId);
   if (!session) return;
 
+  const wagerSeconds = session.gameConfig.finalChallengeWagerSeconds ?? 60;
   io.to(`session:${sessionId}`).emit('final:started', {
     clue: session.gameConfig.finalChallengeClue,
     media: session.gameConfig.finalChallengeMedia,
-    wagerDeadlineMs: 60_000,
+    wagerDeadlineMs: wagerSeconds * 1000,
   });
 
   // Envia a resposta correta apenas ao host

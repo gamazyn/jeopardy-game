@@ -130,6 +130,14 @@ export function useSocketEvents() {
       store.setChallengeState(challengeState);
     });
 
+    socket.on('speed:answered', ({ correct, phase }) => {
+      const current = useGameStore.getState().activeQuestion;
+      if (current) {
+        store.setActiveQuestion({ ...current, speedRoundCorrect: correct });
+      }
+      store.setPhase(phase);
+    });
+
     socket.on('error', ({ code, message }) => {
       console.error(`[socket error] ${code}: ${message}`);
     });
@@ -157,6 +165,7 @@ export function useSocketEvents() {
       socket.off('double:started');
       socket.off('double:wagerLocked');
       socket.off('challenge:assigned');
+      socket.off('speed:answered');
       socket.off('error');
       // Não desconecta — conexão persiste durante toda a sessão de jogo
     };
