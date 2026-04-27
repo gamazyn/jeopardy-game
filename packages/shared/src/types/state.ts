@@ -11,6 +11,7 @@ export type GamePhase =
   | 'double_wager'
   | 'answer_reveal'
   | 'final_challenge'
+  | 'final_answer'
   | 'final_reveal'
   | 'game_over'
   | 'speed_round';

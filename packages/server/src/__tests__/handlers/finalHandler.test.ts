@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { registerFinalHandlers } from '../../handlers/finalHandler.js';
 import { getSession } from '../../managers/sessionManager.js';
+import { stopTimer } from '../../managers/timerManager.js';
 import { makeMockSocket, makeMockIo } from '../helpers/mockSocket.js';
 import { setupSession, HOST_TOKEN, TEST_SESSION_ID } from '../helpers/sessionFixture.js';
 
@@ -18,7 +19,13 @@ vi.mock('../../config.js', () => ({
 }));
 
 beforeEach(() => {
+  vi.useFakeTimers();
   setupSession({ phase: 'answer_reveal' });
+});
+
+afterEach(() => {
+  stopTimer(TEST_SESSION_ID);
+  vi.useRealTimers();
 });
 
 function setupHost() {
@@ -43,6 +50,12 @@ describe('host:startFinal', () => {
     expect(io.emitted.some((e) => e.event === 'final:started')).toBe(true);
   });
 
+  it('inicia timer do desafio final', () => {
+    const { socket, io } = setupHost();
+    socket.trigger('host:startFinal', { sessionId: TEST_SESSION_ID, hostToken: HOST_TOKEN });
+    expect(io.emitted.some((e) => e.event === 'timer:update')).toBe(true);
+  });
+
   it('emite final:hostDetails apenas para host', () => {
     const { socket, io } = setupHost();
     socket.trigger('host:startFinal', { sessionId: TEST_SESSION_ID, hostToken: HOST_TOKEN });
@@ -57,6 +70,14 @@ describe('host:startFinal', () => {
     socket.trigger('host:startFinal', { sessionId: TEST_SESSION_ID, hostToken: HOST_TOKEN });
     expect(socket.emitted.some((e) => e.event === 'error')).toBe(true);
   });
+
+  it('vai para final_reveal quando o timer expira', () => {
+    const { socket, io } = setupHost();
+    socket.trigger('host:startFinal', { sessionId: TEST_SESSION_ID, hostToken: HOST_TOKEN });
+    vi.advanceTimersByTime(60_000);
+    expect(getSession(TEST_SESSION_ID)?.phase).toBe('final_answer');
+    expect(io.emitted.some((e) => e.event === 'final:answerStarted')).toBe(true);
+  });
 });
 
 describe('player:finalWager', () => {
@@ -69,17 +90,16 @@ describe('player:finalWager', () => {
     socket.trigger('player:finalWager', {
       sessionId: TEST_SESSION_ID,
       amount: 300,
-      answer: 'Minha resposta',
     });
     const wager = getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1'];
     expect(wager?.amount).toBe(300);
-    expect(wager?.answer).toBe('Minha resposta');
+    expect(wager?.answer).toBeUndefined();
     expect(io.emitted.some((e) => e.event === 'final:wagerConfirmed')).toBe(true);
   });
 
   it('limita aposta ao score máximo (score positivo)', () => {
     const { socket } = setupPlayer('player-1');
-    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 9999, answer: 'x' });
+    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 9999 });
     expect(getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1']?.amount).toBe(500); // score de Alice
   });
 
@@ -93,29 +113,66 @@ describe('player:finalWager', () => {
       },
     });
     const { socket } = setupPlayer('player-1');
-    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 100, answer: 'x' });
+    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 100 });
     expect(getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1']?.amount).toBe(0);
   });
 
   it('não permite re-envio de aposta', () => {
     const { socket } = setupPlayer('player-1');
-    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 100, answer: 'first' });
-    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 200, answer: 'second' });
-    expect(getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1']?.answer).toBe('first');
+    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 100 });
+    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 200 });
+    expect(getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1']?.amount).toBe(100);
+  });
+
+  it('transita para final_answer quando todos apostaram', () => {
+    // Apenas player-1 e player-2 na sessão
+    const { socket: s1 } = setupPlayer('player-1');
+    const { socket: s2 } = setupPlayer('player-2');
+    s1.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 100 });
+    s2.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 50 });
+    expect(getSession(TEST_SESSION_ID)?.phase).toBe('final_answer');
+  });
+});
+
+describe('player:finalAnswer', () => {
+  beforeEach(() => {
+    setupSession({
+      phase: 'final_answer',
+      finalChallengeWagers: {
+        'player-1': { playerId: 'player-1', amount: 100, revealed: false },
+        'player-2': { playerId: 'player-2', amount: 50, revealed: false },
+      },
+    });
+  });
+
+  it('registra resposta e emite confirmação', () => {
+    const { socket, io } = setupPlayer('player-1');
+    socket.trigger('player:finalAnswer', {
+      sessionId: TEST_SESSION_ID,
+      answer: 'Minha resposta',
+    });
+    expect(getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1']?.answer).toBe('Minha resposta');
+    expect(io.emitted.some((e) => e.event === 'final:answerConfirmed')).toBe(true);
   });
 
   it('sanitiza resposta do jogador', () => {
     const { socket } = setupPlayer('player-1');
-    socket.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 100, answer: '  com espaços  ' });
+    socket.trigger('player:finalAnswer', { sessionId: TEST_SESSION_ID, answer: '  com espaços  ' });
     expect(getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1']?.answer).toBe('com espaços');
   });
 
-  it('transita para final_reveal quando todos apostaram', () => {
-    // Apenas player-1 e player-2 na sessão
+  it('não permite re-envio de resposta', () => {
+    const { socket } = setupPlayer('player-1');
+    socket.trigger('player:finalAnswer', { sessionId: TEST_SESSION_ID, answer: 'first' });
+    socket.trigger('player:finalAnswer', { sessionId: TEST_SESSION_ID, answer: 'second' });
+    expect(getSession(TEST_SESSION_ID)?.finalChallengeWagers['player-1']?.answer).toBe('first');
+  });
+
+  it('transita para final_reveal quando todos responderam', () => {
     const { socket: s1 } = setupPlayer('player-1');
     const { socket: s2 } = setupPlayer('player-2');
-    s1.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 100, answer: 'a' });
-    s2.trigger('player:finalWager', { sessionId: TEST_SESSION_ID, amount: 50, answer: 'b' });
+    s1.trigger('player:finalAnswer', { sessionId: TEST_SESSION_ID, answer: 'a' });
+    s2.trigger('player:finalAnswer', { sessionId: TEST_SESSION_ID, answer: 'b' });
     expect(getSession(TEST_SESSION_ID)?.phase).toBe('final_reveal');
   });
 });

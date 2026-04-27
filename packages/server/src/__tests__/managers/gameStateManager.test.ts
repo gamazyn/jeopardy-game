@@ -44,9 +44,15 @@ describe('canTransition', () => {
     expect(canTransition('answer_reveal', 'lobby')).toBe(false);
   });
 
-  it('final_challenge → final_reveal', () => {
+  it('final_challenge → final_answer ou final_reveal', () => {
+    expect(canTransition('final_challenge', 'final_answer')).toBe(true);
     expect(canTransition('final_challenge', 'final_reveal')).toBe(true);
     expect(canTransition('final_challenge', 'board')).toBe(false);
+  });
+
+  it('final_answer → final_reveal', () => {
+    expect(canTransition('final_answer', 'final_reveal')).toBe(true);
+    expect(canTransition('final_answer', 'board')).toBe(false);
   });
 
   it('final_reveal → game_over', () => {
@@ -55,7 +61,7 @@ describe('canTransition', () => {
   });
 
   it('game_over não tem transições válidas', () => {
-    const phases: GamePhase[] = ['lobby', 'board', 'question', 'buzzer_queue', 'all_play', 'double_wager', 'answer_reveal', 'final_challenge', 'final_reveal', 'game_over', 'speed_round'];
+    const phases: GamePhase[] = ['lobby', 'board', 'question', 'buzzer_queue', 'all_play', 'double_wager', 'answer_reveal', 'final_challenge', 'final_answer', 'final_reveal', 'game_over', 'speed_round'];
     for (const phase of phases) {
       expect(canTransition('game_over', phase)).toBe(false);
     }

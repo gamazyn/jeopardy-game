@@ -135,6 +135,8 @@ export function EditorView() {
             finalChallengeClue: data.finalChallengeClue,
             finalChallengeAnswer: data.finalChallengeAnswer,
             finalChallengeMedia: data.finalChallengeMedia,
+            finalChallengeWagerSeconds: data.finalChallengeWagerSeconds,
+            finalChallengeAnswerSeconds: data.finalChallengeAnswerSeconds,
           });
         })
         .catch(() => setError('Erro ao carregar jogo'));
@@ -326,36 +328,47 @@ export function EditorView() {
               const isActive = !isFinal && selectedQ === qi;
               const meta = TYPE_META[qItem.type];
               return (
-                <button
-                  key={qItem.id}
-                  onClick={() => setSelectedQ(qi)}
-                  className="w-full text-left rounded-xl p-2.5 transition-all duration-150 flex items-center gap-2.5"
-                  style={{
-                    background: isActive ? 'linear-gradient(160deg, #1e3a5f 0%, #0d1f33 100%)' : 'rgba(255,255,255,0.03)',
-                    border: isActive ? '1px solid rgba(232,184,75,0.5)' : '1px solid rgba(255,255,255,0.07)',
-                    borderLeft: isActive ? '2px solid #E8B84B' : '2px solid transparent',
-                  }}
-                >
-                  <span
-                    className="font-mono font-bold text-sm leading-none flex-shrink-0 w-10 text-right"
+                <div key={qItem.id} className="group relative">
+                  <button
+                    onClick={() => setSelectedQ(qi)}
+                    className="w-full text-left rounded-xl p-2.5 pr-8 transition-all duration-150 flex items-center gap-2.5"
                     style={{
-                      color: isActive ? '#E8B84B' : '#94a3b8',
-                      textShadow: isActive ? '0 0 10px rgba(232,184,75,0.4)' : 'none',
+                      background: isActive ? 'linear-gradient(160deg, #1e3a5f 0%, #0d1f33 100%)' : 'rgba(255,255,255,0.03)',
+                      border: isActive ? '1px solid rgba(232,184,75,0.5)' : '1px solid rgba(255,255,255,0.07)',
+                      borderLeft: isActive ? '2px solid #E8B84B' : '2px solid transparent',
                     }}
                   >
-                    ${qItem.value}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-ui truncate" style={{ color: isActive ? '#e2e8f0' : '#64748b' }}>
-                      {qItem.clue || <span className="italic" style={{ color: '#334155' }}>sem clue</span>}
-                    </p>
-                    {qItem.type !== 'standard' && (
-                      <span className="text-[10px] font-mono font-bold" style={{ color: meta.color }}>
-                        {meta.label}
-                      </span>
-                    )}
-                  </div>
-                </button>
+                    <span
+                      className="font-mono font-bold text-sm leading-none flex-shrink-0 w-10 text-right"
+                      style={{
+                        color: isActive ? '#E8B84B' : '#94a3b8',
+                        textShadow: isActive ? '0 0 10px rgba(232,184,75,0.4)' : 'none',
+                      }}
+                    >
+                      ${qItem.value}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-ui truncate" style={{ color: isActive ? '#e2e8f0' : '#64748b' }}>
+                        {qItem.clue || <span className="italic" style={{ color: '#334155' }}>sem clue</span>}
+                      </p>
+                      {qItem.type !== 'standard' && (
+                        <span className="text-[10px] font-mono font-bold" style={{ color: meta.color }}>
+                          {meta.label}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                  {cat.questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(selectedCat, qi)}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all text-xs w-5 h-5 flex items-center justify-center rounded"
+                      aria-label={`Excluir questão ${qi + 1}`}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               );
             })}
             {cat && cat.questions.length < 10 && (

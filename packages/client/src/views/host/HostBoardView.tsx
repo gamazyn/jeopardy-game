@@ -15,7 +15,7 @@ export function HostBoardView() {
   const {
     gameConfig, players, phase, activeQuestion,
     buzzerQueue, timer, hostToken,
-    finalClue, finalCorrectAnswer, wagersSubmitted, hostWagers, revealedWagers,
+    finalClue, finalCorrectAnswer, wagersSubmitted, answersSubmitted, hostWagers, revealedWagers,
     doublePlayerId, doublePlayerName, challengeState,
     reset: resetGame,
   } = useGameStore();
@@ -83,10 +83,12 @@ export function HostBoardView() {
   }
 
   const allUsed = gameConfig.categories.every((c) => c.questions.every((q) => q.used));
-  const isFinalPhase = phase === 'final_challenge' || phase === 'final_reveal';
+  const isFinalPhase = phase === 'final_challenge' || phase === 'final_answer' || phase === 'final_reveal';
   const totalPlayers = players.length;
   const totalWagered = wagersSubmitted.length;
   const allWagered = totalWagered >= totalPlayers && totalPlayers > 0;
+  const totalAnswered = answersSubmitted.length;
+  const allAnswered = totalAnswered >= totalPlayers && totalPlayers > 0;
 
   // Players que ainda não foram revelados no final
   const unrevealedPlayers = players.filter(
@@ -553,6 +555,11 @@ export function HostBoardView() {
 
             {finalClue && (
               <div className="card max-w-2xl w-full text-center">
+                {(phase === 'final_challenge' || phase === 'final_answer') && timer && (
+                  <div className="mb-4">
+                    <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
+                  </div>
+                )}
                 <p className="text-2xl font-bold leading-tight">{finalClue}</p>
                 {finalCorrectAnswer && (
                   <p className="text-slate-400 italic mt-3 text-lg">
@@ -567,9 +574,15 @@ export function HostBoardView() {
               <h3 className="text-jeopardy-gold font-bold mb-3">
                 Apostas recebidas: {totalWagered} / {totalPlayers}
               </h3>
+              {phase !== 'final_challenge' && (
+                <p className="text-slate-400 text-sm mb-3">
+                  Respostas recebidas: {totalAnswered} / {totalPlayers}
+                </p>
+              )}
               <div className="flex flex-col gap-2">
                 {players.map((p) => {
                   const submitted = wagersSubmitted.some((w) => w.playerId === p.id);
+                  const answered = answersSubmitted.some((w) => w.playerId === p.id);
                   const wager = hostWagers[p.id];
 
                   return (
@@ -589,7 +602,22 @@ export function HostBoardView() {
                         <span className="text-slate-400 text-xs">✓ Revelado</span>
                       )}
 
-                      {submitted && wager && !revealedWagers[p.id] && (
+                      {submitted && wager && phase === 'final_challenge' && (
+                        <span className="text-green-400 text-xs">${wager.amount.toLocaleString('pt-BR')}</span>
+                      )}
+
+                      {submitted && !answered && phase === 'final_answer' && (
+                        <span className="text-slate-400 text-xs">Sem resposta ainda</span>
+                      )}
+
+                      {submitted && answered && wager && phase === 'final_answer' && (
+                        <div className="text-right mr-2">
+                          <div className="text-jeopardy-gold font-mono font-bold text-sm">${wager.amount.toLocaleString('pt-BR')}</div>
+                          <div className="text-slate-300 text-xs italic max-w-[120px] truncate font-ui">{wager.answer}</div>
+                        </div>
+                      )}
+
+                      {submitted && wager && !revealedWagers[p.id] && phase === 'final_reveal' && (
                         <div className="flex items-center gap-2">
                           <div className="text-right mr-2">
                             <div className="text-jeopardy-gold font-mono font-bold text-sm">${wager.amount.toLocaleString('pt-BR')}</div>
@@ -616,17 +644,17 @@ export function HostBoardView() {
             </div>
 
             {/* Forçar início da revelação se nem todos apostaram */}
-            {phase === 'final_challenge' && totalWagered > 0 && !allWagered && (
+            {phase === 'final_answer' && totalAnswered > 0 && !allAnswered && (
               <button
                 className="btn-ghost"
                 onClick={() => socket.emit('host:revealFinal', {
                   sessionId: sessionId!,
                   hostToken: hostToken!,
-                  playerId: wagersSubmitted.find((w) => hostWagers[w.playerId])?.playerId ?? '',
+                  playerId: answersSubmitted.find((w) => hostWagers[w.playerId]?.answer)?.playerId ?? '',
                   isCorrect: false,
                 })}
               >
-                Revelar assim mesmo ({totalWagered}/{totalPlayers} apostas)
+                Revelar assim mesmo ({totalAnswered}/{totalPlayers} respostas)
               </button>
             )}
           </motion.div>

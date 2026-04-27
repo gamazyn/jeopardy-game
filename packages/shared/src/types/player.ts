@@ -13,7 +13,7 @@ export interface Player {
 export interface FinalChallengeWager {
   playerId: string;
   amount: number;
-  answer: string;
+  answer?: string;
   isCorrect?: boolean;
   revealed: boolean;
 }
