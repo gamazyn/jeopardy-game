@@ -1,5 +1,6 @@
 import type { Server, Socket } from 'socket.io';
-import type { ServerToClientEvents, ClientToServerEvents, BuzzerEntry } from '@responde-ai/shared';
+import type { ServerToClientEvents, ClientToServerEvents, BuzzerEntry, SpeedRoundCorrect } from '@responde-ai/shared';
+import { sanitizeAnswer } from '@responde-ai/shared';
 import { getSession, updateSession } from '../managers/sessionManager.js';
 import { validateHostToken } from '../middleware/authMiddleware.js';
 import { socketRateLimit } from '../middleware/rateLimiter.js';
@@ -47,6 +48,9 @@ export function registerBuzzerHandlers(
 
     // Dupla Aposta: só o jogador atribuído pode buzzar
     if (session.activeQuestion?.question.type === 'double' && session.doublePlayerId && socket.id !== session.doublePlayerId) return;
+
+    // all_play: rejeitar player bloqueado por erro anterior
+    if (session.phase === 'all_play' && session.activeQuestion?.lockedPlayerIds?.includes(socket.id)) return;
 
     // Evitar duplicata na fila
     if (session.buzzerQueue.some((e) => e.playerId === socket.id)) return;
@@ -106,29 +110,27 @@ export function registerBuzzerHandlers(
     let newScore: number;
 
     if (isChallenge && session.challengeState) {
-      // Scoring especial de challenge
+      // Scoring simétrico 100%: ambos arriscam o valor cheio da questão
       const challenger = session.players[session.challengeState.challengerId];
       const value = activeQuestion.question.value;
       if (payload.correct) {
-        // Desafiado acerta: +value; desafiador perde metade
+        // Desafiado acerta: +value; desafiador perde value
         scoreChange = value;
         updatedPlayers[payload.playerId] = { ...player, score: player.score + value };
         if (challenger) {
-          const challengerLoss = Math.floor(value / 2);
           updatedPlayers[session.challengeState.challengerId] = {
             ...challenger,
-            score: challenger.score - challengerLoss,
+            score: challenger.score - value,
           };
         }
       } else {
-        // Desafiado erra: -value; desafiador ganha metade
+        // Desafiado erra: -value; desafiador ganha value
         scoreChange = -value;
         updatedPlayers[payload.playerId] = { ...player, score: player.score - value };
         if (challenger) {
-          const challengerGain = Math.floor(value / 2);
           updatedPlayers[session.challengeState.challengerId] = {
             ...challenger,
-            score: challenger.score + challengerGain,
+            score: challenger.score + value,
           };
         }
       }
@@ -149,6 +151,41 @@ export function registerBuzzerHandlers(
     const updatedQueue = session.buzzerQueue.map((e) =>
       e.playerId === payload.playerId ? { ...e, responded: true } : e,
     );
+
+    const isAllPlay = activeQuestion.question.type === 'all_play';
+
+    // all_play com erro: bloquear player e reabrir buzzer
+    if (isAllPlay && !payload.correct && !isChallenge) {
+      const lockedPlayerIds = [...(activeQuestion.lockedPlayerIds ?? []), payload.playerId];
+      const totalPlayers = Object.keys(session.players).length;
+      const allLocked = lockedPlayerIds.length >= totalPlayers;
+      const newPhase = allLocked ? 'answer_reveal' : 'all_play';
+
+      const updatedActiveQuestion = { ...activeQuestion, lockedPlayerIds };
+      updateSession(payload.sessionId, {
+        phase: newPhase,
+        players: updatedPlayers,
+        buzzerQueue: [],
+        activeQuestion: updatedActiveQuestion,
+      });
+
+      io.to(`session:${payload.sessionId}`).emit('judge:result', {
+        playerId: payload.playerId,
+        correct: false,
+        scoreChange,
+        newScore,
+        nextInQueue: null,
+        phase: newPhase,
+      });
+      io.to(`session:${payload.sessionId}`).emit('score:update', {
+        players: Object.values(updatedPlayers),
+      });
+
+      if (allLocked) {
+        closeQuestion(io, payload.sessionId, true);
+      }
+      return;
+    }
 
     const nextInQueue = isChallenge ? null : (updatedQueue.find((e) => !e.responded) ?? null);
     const newPhase = payload.correct ? 'answer_reveal' : (nextInQueue ? 'buzzer_queue' : 'board');
@@ -232,8 +269,9 @@ export function registerBuzzerHandlers(
 
     // Saldo negativo: pode apostar até o valor da questão (chance de recuperar)
     // Saldo positivo: pode apostar até o saldo atual
+    // Mínimo sempre 50
     const maxWager = Math.max(player.score, activeQuestion.question.value);
-    const amount = Math.max(0, Math.min(payload.amount, maxWager));
+    const amount = Math.max(50, Math.min(payload.amount, maxWager));
 
     // Salva aposta e transita para question (clue revela para todos, timer inicia)
     updateSession(payload.sessionId, {
@@ -261,6 +299,75 @@ export function registerBuzzerHandlers(
         closeQuestion(io, payload.sessionId, false);
       }
     });
+  });
+
+  // PLAYER: enviar resposta no modo Rodada Rápida
+  socket.on('player:speedAnswer', (payload) => {
+    if (!socketRateLimit(socket.id, 'player:speedAnswer', 10)) return;
+
+    const session = getSession(payload.sessionId);
+    if (!session || session.phase !== 'speed_round') return;
+
+    const player = session.players[socket.id];
+    if (!player) return;
+
+    const activeQuestion = session.activeQuestion;
+    if (!activeQuestion) return;
+
+    const correct = sanitizeAnswer(payload.answer).toLowerCase() === sanitizeAnswer(activeQuestion.question.answer).toLowerCase();
+    if (!correct) return; // errou: tentativas livres, sem penalidade
+
+    const alreadyCorrect = activeQuestion.speedRoundCorrect ?? [];
+
+    // Player já acertou antes — ignorar
+    if (alreadyCorrect.some((e) => e.playerId === socket.id)) return;
+
+    // Rank: quantos já acertaram + 1
+    const rank = alreadyCorrect.length + 1;
+
+    // Pontuação: 1º=100%, 2º=75%, 3º=50%, demais=0
+    const RANK_MULTIPLIERS: Record<number, number> = { 1: 1, 2: 0.75, 3: 0.5 };
+    const multiplier = RANK_MULTIPLIERS[rank] ?? 0;
+    const scoreChange = Math.round(activeQuestion.question.value * multiplier);
+
+    const entry: SpeedRoundCorrect = {
+      playerId: socket.id,
+      playerName: player.name,
+      scoreChange,
+      rank,
+      timestamp: Date.now(),
+    };
+
+    const updatedCorrect = [...alreadyCorrect, entry];
+    const updatedPlayers = { ...session.players };
+    if (scoreChange > 0) {
+      updatedPlayers[socket.id] = { ...player, score: player.score + scoreChange };
+    }
+
+    const updatedActiveQuestion = { ...activeQuestion, speedRoundCorrect: updatedCorrect };
+    const allPlayersScored = updatedCorrect.length >= 3; // rank 3 = encerrar early
+    const newPhase = allPlayersScored ? 'answer_reveal' : 'speed_round';
+
+    updateSession(payload.sessionId, {
+      players: updatedPlayers,
+      activeQuestion: updatedActiveQuestion,
+      ...(allPlayersScored ? { phase: 'answer_reveal' } : {}),
+    });
+
+    io.to(`session:${payload.sessionId}`).emit('speed:answered', {
+      correct: updatedCorrect,
+      phase: newPhase,
+    });
+
+    if (scoreChange > 0) {
+      io.to(`session:${payload.sessionId}`).emit('score:update', {
+        players: Object.values(updatedPlayers),
+      });
+    }
+
+    if (allPlayersScored) {
+      closeQuestion(io, payload.sessionId, true);
+    }
   });
 
   // HOST: pular player da fila

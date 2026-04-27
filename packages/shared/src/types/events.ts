@@ -1,6 +1,6 @@
 import type { GameConfig, MediaAsset } from './game.js';
 import type { Player } from './player.js';
-import type { ActiveQuestion, BuzzerEntry, GamePhase, ChallengeState } from './state.js';
+import type { ActiveQuestion, BuzzerEntry, GamePhase, ChallengeState, SpeedRoundCorrect } from './state.js';
 
 // ============================================================
 // CLIENT → SERVER
@@ -102,6 +102,11 @@ export interface C2S_PlayerFinalWager {
   sessionId: string;
   playerId: string;
   amount: number;
+}
+
+export interface C2S_PlayerFinalAnswer {
+  sessionId: string;
+  playerId: string;
   answer: string;
 }
 
@@ -124,6 +129,12 @@ export interface C2S_HostSetChallenge {
   sessionId: string;
   hostToken: string;
   challengedId: string;
+}
+
+// Speed Round: player envia resposta por texto
+export interface C2S_PlayerSpeedAnswer {
+  sessionId: string;
+  answer: string;
 }
 
 // ============================================================
@@ -206,8 +217,23 @@ export interface S2C_FinalChallengeStarted {
   wagerDeadlineMs: number;
 }
 
+export interface S2C_FinalAnswerStarted {
+  answerDeadlineMs: number;
+}
+
+export interface S2C_FinalPhaseChanged {
+  phase: 'final_reveal';
+}
+
 // Enviado a TODOS quando um player submete aposta (sem valores)
 export interface S2C_FinalWagerConfirmed {
+  playerId: string;
+  playerName: string;
+  totalSubmitted: number;
+  totalPlayers: number;
+}
+
+export interface S2C_FinalAnswerConfirmed {
   playerId: string;
   playerName: string;
   totalSubmitted: number;
@@ -219,7 +245,7 @@ export interface S2C_FinalHostWagerReceived {
   playerId: string;
   playerName: string;
   amount: number;
-  answer: string;
+  answer?: string;
 }
 
 // Enviado APENAS ao host ao iniciar o Desafio Final
@@ -259,6 +285,12 @@ export interface S2C_ChallengeAssigned {
   challengeState: ChallengeState;
 }
 
+// Speed Round: player acertou — broadcast com ranking atual
+export interface S2C_SpeedAnswered {
+  correct: SpeedRoundCorrect[];  // lista completa até agora (rank 1, 2, 3)
+  phase: GamePhase;              // 'speed_round' enquanto aberto, 'answer_reveal' quando encerrou
+}
+
 // ============================================================
 // Mapa de eventos tipados para uso no Socket.io
 // ============================================================
@@ -280,7 +312,10 @@ export interface ServerToClientEvents {
   'score:update': (data: S2C_ScoreUpdate) => void;
   'timer:update': (data: S2C_TimerUpdate) => void;
   'final:started': (data: S2C_FinalChallengeStarted) => void;
+  'final:answerStarted': (data: S2C_FinalAnswerStarted) => void;
+  'final:phaseChanged': (data: S2C_FinalPhaseChanged) => void;
   'final:wagerConfirmed': (data: S2C_FinalWagerConfirmed) => void;
+  'final:answerConfirmed': (data: S2C_FinalAnswerConfirmed) => void;
   'final:hostWagerReceived': (data: S2C_FinalHostWagerReceived) => void;
   'final:hostDetails': (data: S2C_FinalHostDetails) => void;
   'final:revealed': (data: S2C_FinalRevealed) => void;
@@ -288,6 +323,7 @@ export interface ServerToClientEvents {
   'double:started': (data: S2C_DoubleStarted) => void;
   'double:wagerLocked': (data: S2C_DoubleWagerLocked) => void;
   'challenge:assigned': (data: S2C_ChallengeAssigned) => void;
+  'speed:answered': (data: S2C_SpeedAnswered) => void;
 }
 
 export interface ClientToServerEvents {
@@ -308,7 +344,9 @@ export interface ClientToServerEvents {
   'host:endGame': (data: C2S_HostEndGame) => void;
   'player:buzz': (data: C2S_PlayerBuzz) => void;
   'player:finalWager': (data: C2S_PlayerFinalWager) => void;
+  'player:finalAnswer': (data: C2S_PlayerFinalAnswer) => void;
   'host:assignDouble': (data: C2S_HostAssignDouble) => void;
   'player:doubleWager': (data: C2S_PlayerDoubleWager) => void;
   'host:setChallenge': (data: C2S_HostSetChallenge) => void;
+  'player:speedAnswer': (data: C2S_PlayerSpeedAnswer) => void;
 }

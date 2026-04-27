@@ -177,7 +177,7 @@ describe('host:judge — scoring challenge', () => {
     });
   });
 
-  it('desafiado acerta: +value, desafiador -50%', () => {
+  it('desafiado acerta: +value, desafiador -value (simétrico 100%)', () => {
     const socket = makeMockSocket('host-socket');
     const io = makeMockIo();
     registerBuzzerHandlers(io as any, socket as any);
@@ -189,10 +189,10 @@ describe('host:judge — scoring challenge', () => {
     });
     const session = getSession(TEST_SESSION_ID);
     expect(session?.players['player-2']?.score).toBe(700); // 300 + 400
-    expect(session?.players['player-1']?.score).toBe(300); // 500 - 200 (50% de 400)
+    expect(session?.players['player-1']?.score).toBe(100); // 500 - 400 (100% de 400)
   });
 
-  it('desafiado erra: -value, desafiador +50%', () => {
+  it('desafiado erra: -value, desafiador +value (simétrico 100%)', () => {
     const socket = makeMockSocket('host-socket');
     const io = makeMockIo();
     registerBuzzerHandlers(io as any, socket as any);
@@ -204,7 +204,7 @@ describe('host:judge — scoring challenge', () => {
     });
     const session = getSession(TEST_SESSION_ID);
     expect(session?.players['player-2']?.score).toBe(-100); // 300 - 400
-    expect(session?.players['player-1']?.score).toBe(700); // 500 + 200 (50% de 400)
+    expect(session?.players['player-1']?.score).toBe(900); // 500 + 400 (100% de 400)
   });
 });
 
@@ -392,5 +392,172 @@ describe('player:doubleWager', () => {
     socket.trigger('player:doubleWager', { sessionId: TEST_SESSION_ID, amount: 100 });
     socket.trigger('player:doubleWager', { sessionId: TEST_SESSION_ID, amount: 200 });
     expect(getSession(TEST_SESSION_ID)?.doubleWager).toBe(100);
+  });
+
+  it('aplica mínimo de 50 na aposta', () => {
+    const { socket } = setup('player-1');
+    socket.trigger('player:doubleWager', { sessionId: TEST_SESSION_ID, amount: 10 });
+    expect(getSession(TEST_SESSION_ID)?.doubleWager).toBe(50);
+  });
+});
+
+describe('host:judge — all_play (bloqueio + reabertura)', () => {
+  // all_play: player buzza → fase vai para buzzer_queue; host julga em buzzer_queue
+  beforeEach(() => {
+    setupSession({
+      phase: 'buzzer_queue', // host julga sempre em buzzer_queue
+      activeQuestion: {
+        categoryId: 'cat-1',
+        questionId: 'q-1',
+        question: { id: 'q-1', value: 200, clue: 'Q', answer: 'A', type: 'all_play', used: false },
+        startedAt: Date.now(),
+        timerDuration: 30000,
+        lockedPlayerIds: [],
+      },
+      buzzerQueue: [{ playerId: 'player-1', playerName: 'Alice', timestamp: 1, responded: false }],
+    });
+  });
+
+  it('erro em all_play: bloqueia player e volta para all_play', () => {
+    const socket = makeMockSocket('host-socket');
+    const io = makeMockIo();
+    registerBuzzerHandlers(io as any, socket as any);
+    socket.trigger('host:judge', {
+      sessionId: TEST_SESSION_ID,
+      hostToken: HOST_TOKEN,
+      playerId: 'player-1',
+      correct: false,
+    });
+    const session = getSession(TEST_SESSION_ID);
+    expect(session?.phase).toBe('all_play');
+    expect(session?.activeQuestion?.lockedPlayerIds).toContain('player-1');
+    expect(session?.players['player-1']?.score).toBe(300); // 500 - 200
+    expect(session?.buzzerQueue).toHaveLength(0); // fila limpa para reabertura
+  });
+
+  it('erro em all_play: player bloqueado não pode buzzar', () => {
+    const hostSocket = makeMockSocket('host-socket');
+    const io = makeMockIo();
+    registerBuzzerHandlers(io as any, hostSocket as any);
+    // Julgar player-1 errado → phase: all_play, player-1 locked
+    hostSocket.trigger('host:judge', {
+      sessionId: TEST_SESSION_ID,
+      hostToken: HOST_TOKEN,
+      playerId: 'player-1',
+      correct: false,
+    });
+    expect(getSession(TEST_SESSION_ID)?.phase).toBe('all_play');
+    // Tentar buzzar novamente com player-1
+    const playerSocket = makeMockSocket('player-1');
+    registerBuzzerHandlers(io as any, playerSocket as any);
+    playerSocket.trigger('player:buzz', { sessionId: TEST_SESSION_ID });
+    expect(getSession(TEST_SESSION_ID)?.buzzerQueue).toHaveLength(0);
+  });
+
+  it('todos bloqueados (1 player) → answer_reveal', () => {
+    // Sessão com apenas player-1
+    setupSession({
+      phase: 'buzzer_queue',
+      players: { 'player-1': makePlayer('player-1', 'Alice', 500) },
+      activeQuestion: {
+        categoryId: 'cat-1',
+        questionId: 'q-1',
+        question: { id: 'q-1', value: 200, clue: 'Q', answer: 'A', type: 'all_play', used: false },
+        startedAt: Date.now(),
+        timerDuration: 30000,
+        lockedPlayerIds: [],
+      },
+      buzzerQueue: [{ playerId: 'player-1', playerName: 'Alice', timestamp: 1, responded: false }],
+    });
+    const socket = makeMockSocket('host-socket');
+    const io = makeMockIo();
+    registerBuzzerHandlers(io as any, socket as any);
+    socket.trigger('host:judge', {
+      sessionId: TEST_SESSION_ID,
+      hostToken: HOST_TOKEN,
+      playerId: 'player-1',
+      correct: false,
+    });
+    expect(getSession(TEST_SESSION_ID)?.phase).toBe('answer_reveal');
+  });
+
+  it('acerto em all_play: +value e encerra normalmente', () => {
+    const socket = makeMockSocket('host-socket');
+    const io = makeMockIo();
+    registerBuzzerHandlers(io as any, socket as any);
+    socket.trigger('host:judge', {
+      sessionId: TEST_SESSION_ID,
+      hostToken: HOST_TOKEN,
+      playerId: 'player-1',
+      correct: true,
+    });
+    expect(getSession(TEST_SESSION_ID)?.players['player-1']?.score).toBe(700); // 500 + 200
+    expect(getSession(TEST_SESSION_ID)?.phase).toBe('answer_reveal');
+  });
+});
+
+describe('player:speedAnswer', () => {
+  beforeEach(() => {
+    setupSession({
+      phase: 'speed_round',
+      activeQuestion: {
+        categoryId: 'cat-1',
+        questionId: 'q-1',
+        question: { id: 'q-1', value: 200, clue: 'Q', answer: 'Banana', type: 'speed_round', used: false },
+        startedAt: Date.now(),
+        timerDuration: 30000,
+        speedRoundCorrect: [],
+      },
+      buzzerQueue: [],
+    });
+  });
+
+  it('resposta correta (rank 1): +value cheio', () => {
+    const { socket, io } = setup('player-1');
+    socket.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'Banana' });
+    const session = getSession(TEST_SESSION_ID);
+    expect(session?.players['player-1']?.score).toBe(700); // 500 + 200
+    expect(session?.activeQuestion?.speedRoundCorrect).toHaveLength(1);
+    expect(session?.activeQuestion?.speedRoundCorrect?.[0]?.rank).toBe(1);
+    expect(io.emitted.some((e) => e.event === 'speed:answered')).toBe(true);
+  });
+
+  it('resposta correta case-insensitive', () => {
+    const { socket } = setup('player-1');
+    socket.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'banana' });
+    expect(getSession(TEST_SESSION_ID)?.activeQuestion?.speedRoundCorrect).toHaveLength(1);
+  });
+
+  it('resposta errada: ignorada (sem penalidade)', () => {
+    const { socket } = setup('player-1');
+    socket.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'Errado' });
+    const session = getSession(TEST_SESSION_ID);
+    expect(session?.players['player-1']?.score).toBe(500); // sem mudança
+    expect(session?.activeQuestion?.speedRoundCorrect).toHaveLength(0);
+  });
+
+  it('rank 2: 75% do valor', () => {
+    const { socket: s1 } = setup('player-1');
+    const { socket: s2 } = setup('player-2');
+    s1.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'Banana' });
+    s2.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'Banana' });
+    const session = getSession(TEST_SESSION_ID);
+    const entry2 = session?.activeQuestion?.speedRoundCorrect?.find((e) => e.playerId === 'player-2');
+    expect(entry2?.rank).toBe(2);
+    expect(entry2?.scoreChange).toBe(150); // 75% de 200
+  });
+
+  it('mesmo player não pontua duas vezes', () => {
+    const { socket } = setup('player-1');
+    socket.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'Banana' });
+    socket.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'Banana' });
+    expect(getSession(TEST_SESSION_ID)?.activeQuestion?.speedRoundCorrect).toHaveLength(1);
+  });
+
+  it('fase errada: ignorado', () => {
+    setupSession({ phase: 'board' });
+    const { socket } = setup('player-1');
+    socket.trigger('player:speedAnswer', { sessionId: TEST_SESSION_ID, answer: 'Banana' });
+    expect(getSession(TEST_SESSION_ID)?.activeQuestion?.speedRoundCorrect).toBeUndefined();
   });
 });

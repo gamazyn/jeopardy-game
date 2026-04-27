@@ -7,10 +7,11 @@ const DEFAULT_VALUES = [100, 200, 300, 400, 500];
 const FINAL_IDX = -1;
 
 const TYPE_META: Record<Question['type'], { label: string; color: string; bg: string }> = {
-  standard:  { label: 'Normal',       color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
-  all_play:  { label: 'Todos Jogam',  color: '#facc15', bg: 'rgba(250,204,21,0.12)'  },
-  challenge: { label: 'Desafio',      color: '#fb923c', bg: 'rgba(251,146,60,0.12)'  },
-  double:    { label: 'Dupla Aposta', color: '#c084fc', bg: 'rgba(192,132,252,0.12)' },
+  standard:    { label: 'Normal',          color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  all_play:    { label: 'Todos Jogam',     color: '#facc15', bg: 'rgba(250,204,21,0.12)'  },
+  challenge:   { label: 'Desafio',         color: '#fb923c', bg: 'rgba(251,146,60,0.12)'  },
+  double:      { label: 'Dupla Aposta',    color: '#c084fc', bg: 'rgba(192,132,252,0.12)' },
+  speed_round: { label: 'Rodada Rápida',   color: '#4ade80', bg: 'rgba(74,222,128,0.12)'  },
 };
 
 function emptyQuestion(value: number): Question {
@@ -134,6 +135,8 @@ export function EditorView() {
             finalChallengeClue: data.finalChallengeClue,
             finalChallengeAnswer: data.finalChallengeAnswer,
             finalChallengeMedia: data.finalChallengeMedia,
+            finalChallengeWagerSeconds: data.finalChallengeWagerSeconds,
+            finalChallengeAnswerSeconds: data.finalChallengeAnswerSeconds,
           });
         })
         .catch(() => setError('Erro ao carregar jogo'));
@@ -325,36 +328,47 @@ export function EditorView() {
               const isActive = !isFinal && selectedQ === qi;
               const meta = TYPE_META[qItem.type];
               return (
-                <button
-                  key={qItem.id}
-                  onClick={() => setSelectedQ(qi)}
-                  className="w-full text-left rounded-xl p-2.5 transition-all duration-150 flex items-center gap-2.5"
-                  style={{
-                    background: isActive ? 'linear-gradient(160deg, #1e3a5f 0%, #0d1f33 100%)' : 'rgba(255,255,255,0.03)',
-                    border: isActive ? '1px solid rgba(232,184,75,0.5)' : '1px solid rgba(255,255,255,0.07)',
-                    borderLeft: isActive ? '2px solid #E8B84B' : '2px solid transparent',
-                  }}
-                >
-                  <span
-                    className="font-mono font-bold text-sm leading-none flex-shrink-0 w-10 text-right"
+                <div key={qItem.id} className="group relative">
+                  <button
+                    onClick={() => setSelectedQ(qi)}
+                    className="w-full text-left rounded-xl p-2.5 pr-8 transition-all duration-150 flex items-center gap-2.5"
                     style={{
-                      color: isActive ? '#E8B84B' : '#94a3b8',
-                      textShadow: isActive ? '0 0 10px rgba(232,184,75,0.4)' : 'none',
+                      background: isActive ? 'linear-gradient(160deg, #1e3a5f 0%, #0d1f33 100%)' : 'rgba(255,255,255,0.03)',
+                      border: isActive ? '1px solid rgba(232,184,75,0.5)' : '1px solid rgba(255,255,255,0.07)',
+                      borderLeft: isActive ? '2px solid #E8B84B' : '2px solid transparent',
                     }}
                   >
-                    ${qItem.value}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-ui truncate" style={{ color: isActive ? '#e2e8f0' : '#64748b' }}>
-                      {qItem.clue || <span className="italic" style={{ color: '#334155' }}>sem clue</span>}
-                    </p>
-                    {qItem.type !== 'standard' && (
-                      <span className="text-[10px] font-mono font-bold" style={{ color: meta.color }}>
-                        {meta.label}
-                      </span>
-                    )}
-                  </div>
-                </button>
+                    <span
+                      className="font-mono font-bold text-sm leading-none flex-shrink-0 w-10 text-right"
+                      style={{
+                        color: isActive ? '#E8B84B' : '#94a3b8',
+                        textShadow: isActive ? '0 0 10px rgba(232,184,75,0.4)' : 'none',
+                      }}
+                    >
+                      ${qItem.value}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-ui truncate" style={{ color: isActive ? '#e2e8f0' : '#64748b' }}>
+                        {qItem.clue || <span className="italic" style={{ color: '#334155' }}>sem clue</span>}
+                      </p>
+                      {qItem.type !== 'standard' && (
+                        <span className="text-[10px] font-mono font-bold" style={{ color: meta.color }}>
+                          {meta.label}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                  {cat.questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(selectedCat, qi)}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all text-xs w-5 h-5 flex items-center justify-center rounded"
+                      aria-label={`Excluir questão ${qi + 1}`}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               );
             })}
             {cat && cat.questions.length < 10 && (
@@ -512,15 +526,15 @@ export function EditorView() {
                     )}
                   </div>
 
-                  {/* Challenge target */}
+                  {/* Challenge target — dica visível ao host durante o duelo */}
                   {q.type === 'challenge' && (
                     <div className="flex flex-col gap-2">
                       <label className="font-mono text-xs uppercase tracking-widest font-bold" style={{ color: '#fb923c' }}>
-                        Alvo do Desafio
+                        Dica de Alvo <span className="font-ui normal-case text-slate-500 ml-1">(visível só ao host, opcional)</span>
                       </label>
                       <input
                         type="text"
-                        placeholder="Ex: jogador com mais pontos (opcional)"
+                        placeholder="Ex: quem tem mais pontos, o mais novo, etc."
                         value={q.challengeTarget ?? ''}
                         onChange={(e) => updateQuestion(selectedCat, selectedQ, { challengeTarget: e.target.value || undefined })}
                         className="editor-input font-ui text-sm"
@@ -651,6 +665,39 @@ export function EditorView() {
                       className="editor-input font-ui text-sm"
                       style={{ color: '#cbd5e1' }}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="font-mono text-xs uppercase tracking-widest font-bold text-slate-400">
+                        Tempo de Aposta <span className="font-ui normal-case text-slate-500">(s)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={300}
+                        placeholder="60"
+                        value={game.finalChallengeWagerSeconds ?? ''}
+                        onChange={(e) => setGame((g) => ({ ...g, finalChallengeWagerSeconds: parseInt(e.target.value) || undefined }))}
+                        className="editor-input font-mono text-sm"
+                        style={{ color: '#cbd5e1' }}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="font-mono text-xs uppercase tracking-widest font-bold text-slate-400">
+                        Tempo de Resposta <span className="font-ui normal-case text-slate-500">(s)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={300}
+                        placeholder="60"
+                        value={game.finalChallengeAnswerSeconds ?? ''}
+                        onChange={(e) => setGame((g) => ({ ...g, finalChallengeAnswerSeconds: parseInt(e.target.value) || undefined }))}
+                        className="editor-input font-mono text-sm"
+                        style={{ color: '#cbd5e1' }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

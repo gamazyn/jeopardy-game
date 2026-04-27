@@ -15,7 +15,7 @@ export function HostBoardView() {
   const {
     gameConfig, players, phase, activeQuestion,
     buzzerQueue, timer, hostToken,
-    finalClue, finalCorrectAnswer, wagersSubmitted, hostWagers, revealedWagers,
+    finalClue, finalCorrectAnswer, wagersSubmitted, answersSubmitted, hostWagers, revealedWagers,
     doublePlayerId, doublePlayerName, challengeState,
     reset: resetGame,
   } = useGameStore();
@@ -83,10 +83,12 @@ export function HostBoardView() {
   }
 
   const allUsed = gameConfig.categories.every((c) => c.questions.every((q) => q.used));
-  const isFinalPhase = phase === 'final_challenge' || phase === 'final_reveal';
+  const isFinalPhase = phase === 'final_challenge' || phase === 'final_answer' || phase === 'final_reveal';
   const totalPlayers = players.length;
   const totalWagered = wagersSubmitted.length;
   const allWagered = totalWagered >= totalPlayers && totalPlayers > 0;
+  const totalAnswered = answersSubmitted.length;
+  const allAnswered = totalAnswered >= totalPlayers && totalPlayers > 0;
 
   // Players que ainda não foram revelados no final
   const unrevealedPlayers = players.filter(
@@ -145,7 +147,7 @@ export function HostBoardView() {
 
           {/* Timer + controles */}
           <AnimatePresence>
-            {(phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && activeQuestion && (
+            {(phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue' || phase === 'speed_round') && activeQuestion && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -185,6 +187,26 @@ export function HostBoardView() {
                     Revelar resposta ao fechar
                   </span>
                 </label>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* all_play: lista de bloqueados por erro */}
+          <AnimatePresence>
+            {phase === 'all_play' && activeQuestion && (activeQuestion.lockedPlayerIds?.length ?? 0) > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="card flex flex-col gap-2"
+              >
+                <h3 className="text-red-400 font-bold text-sm">🚫 Bloqueados</h3>
+                {activeQuestion.lockedPlayerIds!.map((id) => {
+                  const p = players.find((pl) => pl.id === id);
+                  return p ? (
+                    <p key={id} className="text-xs text-slate-400 line-through">{p.name}</p>
+                  ) : null;
+                })}
               </motion.div>
             )}
           </AnimatePresence>
@@ -230,11 +252,14 @@ export function HostBoardView() {
                           <span className="text-white font-bold">{challengeState.challengerName}</span> desafia{' '}
                           <span className="text-jeopardy-gold font-bold">{challengeState.challengedName}</span>
                         </p>
+                        {activeQuestion.question.challengeTarget && (
+                          <p className="text-xs text-amber-400/70 italic">💡 {activeQuestion.question.challengeTarget}</p>
+                        )}
                         <p className="text-xs text-slate-500">
-                          Certo: {challengeState.challengedName} +${activeQuestion.question.value}, {challengeState.challengerName} -${Math.floor(activeQuestion.question.value / 2)}
+                          Certo: {challengeState.challengedName} +${activeQuestion.question.value}, {challengeState.challengerName} -${activeQuestion.question.value}
                         </p>
                         <p className="text-xs text-slate-500">
-                          Errado: {challengeState.challengedName} -${activeQuestion.question.value}, {challengeState.challengerName} +${Math.floor(activeQuestion.question.value / 2)}
+                          Errado: {challengeState.challengedName} -${activeQuestion.question.value}, {challengeState.challengerName} +${activeQuestion.question.value}
                         </p>
                         <div className="flex gap-2 mt-1">
                           <button className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded text-sm" onClick={() => judge(challengeState.challengedId!, true)}>Correto</button>
@@ -269,6 +294,55 @@ export function HostBoardView() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Overlay da Rodada Rápida */}
+      <AnimatePresence>
+        {activeQuestion && phase === 'speed_round' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-jeopardy-blue/95 backdrop-blur-sm flex items-center justify-center p-8 z-50"
+          >
+            <div className="max-w-3xl w-full text-center flex flex-col items-center gap-6">
+              <div className="font-arcade text-lg text-green-400 tracking-widest">⚡ RODADA RÁPIDA</div>
+              <div className="font-mono text-jeopardy-gold text-2xl" style={{ textShadow: '0 0 16px rgba(232,184,75,0.5)' }}>${activeQuestion.question.value}</div>
+              {activeQuestion.question.media && (
+                <img src={`/media/${gameConfig!.id}/${activeQuestion.question.media.filename}`} alt="" className="mx-auto max-h-56 object-contain rounded-xl" />
+              )}
+              <p className="text-4xl font-bold leading-tight">{activeQuestion.question.clue}</p>
+              <p className="text-slate-400 italic text-lg font-ui">{activeQuestion.question.answer}</p>
+
+              {/* Feed ao vivo de acertos */}
+              {(activeQuestion.speedRoundCorrect?.length ?? 0) > 0 && (
+                <div className="card w-full max-w-md text-left flex flex-col gap-2">
+                  <h3 className="text-jeopardy-gold font-bold text-sm mb-1">Acertos</h3>
+                  {activeQuestion.speedRoundCorrect!.map((entry) => (
+                    <div key={entry.playerId} className="flex items-center gap-3">
+                      <span className="font-mono text-jeopardy-gold font-bold w-6">#{entry.rank}</span>
+                      <span className="font-bold flex-1">{entry.playerName}</span>
+                      <span className="text-green-400 font-mono text-sm">+${entry.scoreChange}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {timer && (
+                <div className="max-w-md w-full">
+                  <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
+                </div>
+              )}
+              <div className="flex gap-3">
+                {timer?.isPaused
+                  ? <button className="btn-ghost" onClick={() => timerControl('resume')}>▶ Retomar</button>
+                  : <button className="btn-ghost" onClick={() => timerControl('pause')}>⏸ Pausar</button>
+                }
+                <button className="btn-ghost text-red-400 border-red-400" onClick={clearQuestion}>Fechar</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Overlay da questão ativa */}
       <AnimatePresence>
@@ -481,6 +555,11 @@ export function HostBoardView() {
 
             {finalClue && (
               <div className="card max-w-2xl w-full text-center">
+                {(phase === 'final_challenge' || phase === 'final_answer') && timer && (
+                  <div className="mb-4">
+                    <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
+                  </div>
+                )}
                 <p className="text-2xl font-bold leading-tight">{finalClue}</p>
                 {finalCorrectAnswer && (
                   <p className="text-slate-400 italic mt-3 text-lg">
@@ -495,9 +574,15 @@ export function HostBoardView() {
               <h3 className="text-jeopardy-gold font-bold mb-3">
                 Apostas recebidas: {totalWagered} / {totalPlayers}
               </h3>
+              {phase !== 'final_challenge' && (
+                <p className="text-slate-400 text-sm mb-3">
+                  Respostas recebidas: {totalAnswered} / {totalPlayers}
+                </p>
+              )}
               <div className="flex flex-col gap-2">
                 {players.map((p) => {
                   const submitted = wagersSubmitted.some((w) => w.playerId === p.id);
+                  const answered = answersSubmitted.some((w) => w.playerId === p.id);
                   const wager = hostWagers[p.id];
 
                   return (
@@ -517,7 +602,22 @@ export function HostBoardView() {
                         <span className="text-slate-400 text-xs">✓ Revelado</span>
                       )}
 
-                      {submitted && wager && !revealedWagers[p.id] && (
+                      {submitted && wager && phase === 'final_challenge' && (
+                        <span className="text-green-400 text-xs">${wager.amount.toLocaleString('pt-BR')}</span>
+                      )}
+
+                      {submitted && !answered && phase === 'final_answer' && (
+                        <span className="text-slate-400 text-xs">Sem resposta ainda</span>
+                      )}
+
+                      {submitted && answered && wager && phase === 'final_answer' && (
+                        <div className="text-right mr-2">
+                          <div className="text-jeopardy-gold font-mono font-bold text-sm">${wager.amount.toLocaleString('pt-BR')}</div>
+                          <div className="text-slate-300 text-xs italic max-w-[120px] truncate font-ui">{wager.answer}</div>
+                        </div>
+                      )}
+
+                      {submitted && wager && !revealedWagers[p.id] && phase === 'final_reveal' && (
                         <div className="flex items-center gap-2">
                           <div className="text-right mr-2">
                             <div className="text-jeopardy-gold font-mono font-bold text-sm">${wager.amount.toLocaleString('pt-BR')}</div>
@@ -544,17 +644,17 @@ export function HostBoardView() {
             </div>
 
             {/* Forçar início da revelação se nem todos apostaram */}
-            {phase === 'final_challenge' && totalWagered > 0 && !allWagered && (
+            {phase === 'final_answer' && totalAnswered > 0 && !allAnswered && (
               <button
                 className="btn-ghost"
                 onClick={() => socket.emit('host:revealFinal', {
                   sessionId: sessionId!,
                   hostToken: hostToken!,
-                  playerId: wagersSubmitted.find((w) => hostWagers[w.playerId])?.playerId ?? '',
+                  playerId: answersSubmitted.find((w) => hostWagers[w.playerId]?.answer)?.playerId ?? '',
                   isCorrect: false,
                 })}
               >
-                Revelar assim mesmo ({totalWagered}/{totalPlayers} apostas)
+                Revelar assim mesmo ({totalAnswered}/{totalPlayers} respostas)
               </button>
             )}
           </motion.div>

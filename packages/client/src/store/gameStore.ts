@@ -18,7 +18,7 @@ interface HostWager {
   playerId: string;
   playerName: string;
   amount: number;
-  answer: string;
+  answer?: string;
 }
 
 interface WagerStatus {
@@ -46,7 +46,9 @@ interface GameState {
   finalClue: string | null;
   finalMedia: GameConfig['finalChallengeMedia'] | null;
   myWagerSent: boolean;
+  myFinalAnswerSent: boolean;
   wagersSubmitted: WagerStatus[];           // quem já apostou (todos veem)
+  answersSubmitted: WagerStatus[];          // quem já respondeu (todos veem)
 
   // Desafio Final — somente host
   finalCorrectAnswer: string | null;
@@ -76,6 +78,8 @@ interface GameState {
   addHostWager: (wager: HostWager) => void;
   markWagerRevealed: (playerId: string) => void;
   setMyWagerSent: () => void;
+  setMyFinalAnswerSent: () => void;
+  addAnswerSubmitted: (playerId: string, playerName: string) => void;
   setDoubleAssigned: (playerId: string | null, playerName: string | null) => void;
   setDoubleWagerLocked: (wager: number) => void;
   setChallengeState: (state: ChallengeState | null) => void;
@@ -97,7 +101,9 @@ const initialState = {
   finalClue: null,
   finalMedia: null,
   myWagerSent: false,
+  myFinalAnswerSent: false,
   wagersSubmitted: [],
+  answersSubmitted: [],
   finalCorrectAnswer: null,
   hostWagers: {},
   revealedWagers: {},
@@ -147,7 +153,17 @@ export const useGameStore = create<GameState>((set) => ({
     }),
 
   setFinalChallenge: (finalClue, finalMedia) =>
-    set({ finalClue, finalMedia, phase: 'final_challenge' }),
+    set({
+      finalClue,
+      finalMedia,
+      phase: 'final_challenge',
+      myWagerSent: false,
+      myFinalAnswerSent: false,
+      wagersSubmitted: [],
+      answersSubmitted: [],
+      hostWagers: {},
+      revealedWagers: {},
+    }),
 
   setFinalCorrectAnswer: (finalCorrectAnswer) => set({ finalCorrectAnswer }),
 
@@ -165,6 +181,15 @@ export const useGameStore = create<GameState>((set) => ({
     set((s) => ({ revealedWagers: { ...s.revealedWagers, [playerId]: true } })),
 
   setMyWagerSent: () => set({ myWagerSent: true }),
+
+  setMyFinalAnswerSent: () => set({ myFinalAnswerSent: true }),
+
+  addAnswerSubmitted: (playerId, playerName) =>
+    set((s) => ({
+      answersSubmitted: s.answersSubmitted.some((w) => w.playerId === playerId)
+        ? s.answersSubmitted
+        : [...s.answersSubmitted, { playerId, playerName }],
+    })),
 
   setDoubleAssigned: (doublePlayerId, doublePlayerName) =>
     set({ doublePlayerId, doublePlayerName }),

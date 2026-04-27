@@ -19,9 +19,11 @@ export function PlayerGameView() {
     activeQuestion,
     timer,
     myWagerSent,
+    myFinalAnswerSent,
     finalClue,
     finalMedia,
     setMyWagerSent,
+    setMyFinalAnswerSent,
     doublePlayerId,
     doublePlayerName,
     doubleWager,
@@ -33,6 +35,7 @@ export function PlayerGameView() {
   const [wagerAnswer, setWagerAnswer] = useState('');
   const [doubleWagerInput, setDoubleWagerInput] = useState('');
   const [doubleWagerSent, setDoubleWagerSent] = useState(false);
+  const [speedInput, setSpeedInput] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUnlocked = useRef(false);
   // Callback ref que ignora null: evita que a exit animation do AnimatePresence
@@ -89,8 +92,15 @@ export function PlayerGameView() {
     e.preventDefault();
     if (!sessionId || !myId) return;
     const amount = Math.max(0, parseInt(wagerAmount) || 0);
-    socket.emit('player:finalWager', { sessionId, playerId: myId, amount, answer: wagerAnswer });
+    socket.emit('player:finalWager', { sessionId, playerId: myId, amount });
     setMyWagerSent();
+  }
+
+  function submitFinalAnswer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sessionId || !myId || !wagerAnswer.trim()) return;
+    socket.emit('player:finalAnswer', { sessionId, playerId: myId, answer: wagerAnswer });
+    setMyFinalAnswerSent();
   }
 
   function submitDoubleWager(e: React.FormEvent) {
@@ -99,6 +109,13 @@ export function PlayerGameView() {
     const amount = Math.max(0, parseInt(doubleWagerInput) || 0);
     socket.emit('player:doubleWager', { sessionId, playerId: myId, amount });
     setDoubleWagerSent(true);
+  }
+
+  function submitSpeedAnswer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sessionId || !speedInput.trim()) return;
+    socket.emit('player:speedAnswer', { sessionId, answer: speedInput.trim() });
+    setSpeedInput(''); // limpar para nova tentativa
   }
 
   if (!gameConfig) {
@@ -131,7 +148,11 @@ export function PlayerGameView() {
   }
 
   const isDoubleAndNotAssigned = activeQuestion?.question.type === 'double' && doublePlayerId && doublePlayerId !== myId;
-  const canBuzz = (phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !buzzerPosition && !isDoubleAndNotAssigned;
+  const isLockedAllPlay = phase === 'all_play' && activeQuestion?.lockedPlayerIds?.includes(myId ?? '');
+  const canBuzz = (phase === 'question' || phase === 'all_play' || phase === 'buzzer_queue') && !buzzerPosition && !isDoubleAndNotAssigned && !isLockedAllPlay;
+
+  // speed_round: meu acerto (se houver)
+  const mySpeedEntry = activeQuestion?.speedRoundCorrect?.find((e) => e.playerId === myId);
 
   return (
     <div className="fixed inset-0 flex flex-col p-3 gap-2 overflow-hidden">
@@ -231,7 +252,8 @@ export function PlayerGameView() {
           >
             <div className="text-jeopardy-gold text-xl">
               ${activeQuestion.question.value}
-              {phase === 'all_play' && <span className="ml-3 text-sm bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">TODOS JOGAM</span>}
+              {phase === 'all_play' && !isLockedAllPlay && <span className="ml-3 text-sm bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">TODOS JOGAM</span>}
+              {isLockedAllPlay && <span className="ml-3 text-sm bg-red-600 text-white px-2 py-0.5 rounded font-bold">🚫 BLOQUEADO</span>}
               {activeQuestion.question.type === 'double' && doubleWager !== null && <span className="ml-3 text-sm bg-purple-500 text-white px-2 py-0.5 rounded font-bold">DUPLA APOSTA ${doubleWager}</span>}
             </div>
 
@@ -370,10 +392,89 @@ export function PlayerGameView() {
         </motion.div>
       )}
 
+      {/* Rodada Rápida */}
+      {phase === 'speed_round' && activeQuestion && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto"
+        >
+          <div className="font-arcade text-base text-green-400 tracking-widest">⚡ RODADA RÁPIDA</div>
+          <div className="text-jeopardy-gold text-xl">${activeQuestion.question.value}</div>
+
+          {activeQuestion.question.media && (
+            <img
+              src={`/media/${gameConfig.id}/${activeQuestion.question.media.filename}`}
+              alt=""
+              className="max-h-40 object-contain rounded-xl"
+            />
+          )}
+
+          <p className="text-xl md:text-3xl font-bold text-center leading-tight max-w-2xl">
+            {activeQuestion.question.clue}
+          </p>
+
+          {timer && (
+            <div className="w-full max-w-md">
+              <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
+            </div>
+          )}
+
+          {/* Feed de acertos ao vivo */}
+          {(activeQuestion.speedRoundCorrect?.length ?? 0) > 0 && (
+            <div className="w-full max-w-md flex flex-col gap-1">
+              {activeQuestion.speedRoundCorrect!.map((entry) => (
+                <div
+                  key={entry.playerId}
+                  className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm ${entry.playerId === myId ? 'bg-green-600/30 border border-green-500/40' : 'bg-slate-800/40'}`}
+                >
+                  <span className="font-mono text-jeopardy-gold font-bold w-5">#{entry.rank}</span>
+                  <span className="font-bold flex-1">{entry.playerName}</span>
+                  <span className="text-green-400 font-mono">+${entry.scoreChange}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Input de resposta */}
+          {mySpeedEntry ? (
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="text-4xl">✅</div>
+              <p className="font-arcade text-green-400 tracking-wider">ACERTOU!</p>
+              <p className="text-slate-400 text-sm">#{mySpeedEntry.rank} — +${mySpeedEntry.scoreChange} pts</p>
+            </div>
+          ) : (
+            <form onSubmit={submitSpeedAnswer} className="flex gap-2 w-full max-w-md">
+              <input
+                type="text"
+                value={speedInput}
+                onChange={(e) => setSpeedInput(e.target.value)}
+                maxLength={200}
+                autoFocus
+                className="flex-1 bg-jeopardy-blue-light border-2 border-slate-600 focus:border-jeopardy-gold rounded-lg px-4 py-3 text-white text-lg focus:outline-none transition-colors"
+                placeholder="Digite sua resposta..."
+              />
+              <button
+                type="submit"
+                disabled={!speedInput.trim()}
+                className="btn-primary px-5 text-lg disabled:opacity-40"
+              >
+                ↵
+              </button>
+            </form>
+          )}
+        </motion.div>
+      )}
+
       {/* Desafio Final */}
       {phase === 'final_challenge' && (
         <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-jeopardy-gold">Desafio Final!</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-jeopardy-gold">Desafio Final: Aposta</h2>
+          {timer && (
+            <div className="w-full max-w-md">
+              <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
+            </div>
+          )}
           {finalClue && (
             <p className="text-2xl font-bold text-center max-w-xl">{finalClue}</p>
           )}
@@ -386,6 +487,9 @@ export function PlayerGameView() {
           )}
           {!myWagerSent ? (
             <form onSubmit={submitWager} className="flex flex-col gap-4 w-full max-w-md">
+              <p className="text-slate-300 text-sm text-center">
+                Defina sua aposta agora. A resposta sera enviada na proxima etapa.
+              </p>
               <div>
                 <label className="text-slate-300 text-sm mb-1 block">
                   Quanto você aposta? (máx: ${Math.max(myPlayer?.score ?? 0, 0)})
@@ -400,6 +504,61 @@ export function PlayerGameView() {
                   placeholder="0"
                 />
               </div>
+              <button type="submit" className="btn-primary text-xl">
+                Confirmar Aposta
+              </button>
+            </form>
+          ) : (
+            <div
+              className="flex flex-col items-center gap-4 p-8 rounded-2xl text-center max-w-sm w-full"
+              style={{
+                background: 'rgba(232,184,75,0.06)',
+                border: '1px solid rgba(232,184,75,0.2)',
+              }}
+            >
+              <div className="text-4xl animate-bounce">⏳</div>
+              <p className="font-arcade text-lg text-jeopardy-gold tracking-wide">APOSTA ENVIADA!</p>
+              <p className="text-slate-400 font-ui text-sm">Aguarde. A etapa para enviar sua resposta vai abrir em seguida.</p>
+              <div className="flex gap-1.5 mt-1">
+                {[0,1,2].map(i => (
+                  <div
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-jeopardy-gold/40 animate-pulse"
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {timer?.remainingMs === 0 && (
+            <p className="text-slate-400 font-ui text-sm">Tempo encerrado. Aguardando revelacao...</p>
+          )}
+        </div>
+      )}
+
+      {phase === 'final_answer' && (
+        <div className="fixed inset-0 bg-jeopardy-blue flex flex-col items-center justify-center p-4 md:p-6 z-50 gap-4 md:gap-6 overflow-y-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-jeopardy-gold">Desafio Final: Resposta</h2>
+          {timer && (
+            <div className="w-full max-w-md">
+              <QuestionTimer remainingMs={timer.remainingMs} totalMs={timer.totalMs} isPaused={timer.isPaused} />
+            </div>
+          )}
+          {finalClue && (
+            <p className="text-2xl font-bold text-center max-w-xl">{finalClue}</p>
+          )}
+          {finalMedia && (
+            finalMedia.type === 'audio' ? (
+              <audio src={`/media/${gameConfig?.id}/${finalMedia.filename}`} autoPlay controls className="w-full max-w-md" />
+            ) : (
+              <img src={`/media/${gameConfig?.id}/${finalMedia.filename}`} alt="" className="max-h-48 object-contain rounded-xl" />
+            )
+          )}
+          {!myFinalAnswerSent ? (
+            <form onSubmit={submitFinalAnswer} className="flex flex-col gap-4 w-full max-w-md">
+              <p className="text-slate-300 text-sm text-center">
+                Agora envie sua resposta final antes que o tempo acabe.
+              </p>
               <div>
                 <label className="text-slate-300 text-sm mb-1 block">Sua resposta</label>
                 <input
@@ -408,7 +567,7 @@ export function PlayerGameView() {
                   onChange={(e) => setWagerAnswer(e.target.value)}
                   maxLength={500}
                   className="w-full bg-jeopardy-blue-light border-2 border-slate-500 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-jeopardy-gold"
-                  placeholder="O que é..."
+                  placeholder="O que e..."
                 />
               </div>
               <button type="submit" className="btn-primary text-xl" disabled={!wagerAnswer.trim()}>
@@ -423,18 +582,9 @@ export function PlayerGameView() {
                 border: '1px solid rgba(232,184,75,0.2)',
               }}
             >
-              <div className="text-4xl animate-bounce">⏳</div>
-              <p className="font-arcade text-lg text-jeopardy-gold tracking-wide">APOSTA ENVIADA!</p>
-              <p className="text-slate-400 font-ui text-sm">Aguardando o host decidir...</p>
-              <div className="flex gap-1.5 mt-1">
-                {[0,1,2].map(i => (
-                  <div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-jeopardy-gold/40 animate-pulse"
-                    style={{ animationDelay: `${i * 0.2}s` }}
-                  />
-                ))}
-              </div>
+              <div className="text-4xl animate-bounce">✍️</div>
+              <p className="font-arcade text-lg text-jeopardy-gold tracking-wide">RESPOSTA ENVIADA!</p>
+              <p className="text-slate-400 font-ui text-sm">Resposta confirmada. Aguarde a revelacao do host.</p>
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-export type QuestionType = 'standard' | 'all_play' | 'challenge' | 'double';
+export type QuestionType = 'standard' | 'all_play' | 'challenge' | 'double' | 'speed_round';
 
 export interface MediaAsset {
   type: 'image' | 'audio';
@@ -39,6 +39,8 @@ export interface GameConfig {
   finalChallengeClue: string;
   finalChallengeAnswer: string;
   finalChallengeMedia?: MediaAsset;
+  finalChallengeWagerSeconds?: number;   // default 60
+  finalChallengeAnswerSeconds?: number;  // default 60
   createdAt: string;
   updatedAt: string;
 }

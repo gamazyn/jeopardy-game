@@ -111,13 +111,26 @@ export function registerGameHandlers(
       // Todos jogam: vai direto para all_play, timer começa
       updateSession(payload.sessionId, {
         phase: 'all_play',
-        activeQuestion,
+        activeQuestion: { ...activeQuestion, lockedPlayerIds: [] },
         buzzerQueue: [],
         challengeState: null,
       });
       io.to(`session:${payload.sessionId}`).emit('question:selected', {
-        activeQuestion,
+        activeQuestion: { ...activeQuestion, lockedPlayerIds: [] },
         phase: 'all_play',
+      });
+    } else if (question.type === 'speed_round') {
+      // Rodada Rápida: fase speed_round, todos respondem por input de texto
+      const aqWithSpeed = { ...activeQuestion, speedRoundCorrect: [] };
+      updateSession(payload.sessionId, {
+        phase: 'speed_round',
+        activeQuestion: aqWithSpeed,
+        buzzerQueue: [],
+        challengeState: null,
+      });
+      io.to(`session:${payload.sessionId}`).emit('question:selected', {
+        activeQuestion: aqWithSpeed,
+        phase: 'speed_round',
       });
     } else {
       // Standard ou challenge: fase question normal
@@ -135,7 +148,7 @@ export function registerGameHandlers(
 
     const onExpire = () => {
       const current = getSession(payload.sessionId);
-      if (current?.phase === 'question' || current?.phase === 'all_play') {
+      if (current?.phase === 'question' || current?.phase === 'all_play' || current?.phase === 'speed_round') {
         closeQuestion(io, payload.sessionId, false);
       }
     };
@@ -200,7 +213,7 @@ export function registerGameHandlers(
 
     const onExpire = () => {
       const current = getSession(payload.sessionId);
-      if (current?.phase === 'question' || current?.phase === 'all_play') closeQuestion(io, payload.sessionId, false);
+      if (current?.phase === 'question' || current?.phase === 'all_play' || current?.phase === 'speed_round') closeQuestion(io, payload.sessionId, false);
     };
 
     switch (payload.action) {

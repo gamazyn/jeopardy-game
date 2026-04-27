@@ -4,6 +4,7 @@ import { sanitizeAnswer } from '@responde-ai/shared';
 import { getSession, updateSession } from '../managers/sessionManager.js';
 import { validateHostToken } from '../middleware/authMiddleware.js';
 import { canTransition } from '../managers/gameStateManager.js';
+import { startTimer, stopTimer } from '../managers/timerManager.js';
 
 function requireHost(
   socket: Socket,
@@ -30,15 +31,47 @@ export function emitFinalChallengeStart(
   const session = getSession(sessionId);
   if (!session) return;
 
+  const wagerSeconds = session.gameConfig.finalChallengeWagerSeconds ?? 60;
+  const wagerDurationMs = wagerSeconds * 1000;
   io.to(`session:${sessionId}`).emit('final:started', {
     clue: session.gameConfig.finalChallengeClue,
     media: session.gameConfig.finalChallengeMedia,
-    wagerDeadlineMs: 60_000,
+    wagerDeadlineMs: wagerDurationMs,
   });
 
   // Envia a resposta correta apenas ao host
   io.to(`host:${sessionId}`).emit('final:hostDetails', {
     correctAnswer: session.gameConfig.finalChallengeAnswer,
+  });
+
+  startTimer(io, sessionId, wagerDurationMs, () => {
+    const current = getSession(sessionId);
+    if (!current || current.phase !== 'final_challenge') return;
+    startFinalAnswerStage(io, sessionId);
+  });
+}
+
+function startFinalAnswerStage(
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  sessionId: string,
+): void {
+  const session = getSession(sessionId);
+  if (!session) return;
+
+  const answerSeconds = session.gameConfig.finalChallengeAnswerSeconds ?? 60;
+  const answerDurationMs = answerSeconds * 1000;
+
+  updateSession(sessionId, { phase: 'final_answer' });
+  io.to(`session:${sessionId}`).emit('final:answerStarted', {
+    answerDeadlineMs: answerDurationMs,
+  });
+
+  startTimer(io, sessionId, answerDurationMs, () => {
+    const current = getSession(sessionId);
+    if (!current || current.phase !== 'final_answer') return;
+
+    updateSession(sessionId, { phase: 'final_reveal' });
+    io.to(`session:${sessionId}`).emit('final:phaseChanged', { phase: 'final_reveal' });
   });
 }
 
@@ -72,11 +105,10 @@ export function registerFinalHandlers(
     if (session.finalChallengeWagers[socket.id]) return;
 
     const amount = Math.max(0, Math.min(payload.amount, Math.max(player.score, 0)));
-    const answer = sanitizeAnswer(payload.answer);
 
     const updatedWagers = {
       ...session.finalChallengeWagers,
-      [socket.id]: { playerId: socket.id, amount, answer, revealed: false },
+      [socket.id]: { playerId: socket.id, amount, revealed: false },
     };
 
     updateSession(payload.sessionId, { finalChallengeWagers: updatedWagers });
@@ -97,12 +129,52 @@ export function registerFinalHandlers(
       playerId: socket.id,
       playerName: player.name,
       amount,
+    });
+
+    // Se todos apostaram, mover para fase de resposta
+    if (totalSubmitted >= totalPlayers) {
+      stopTimer(payload.sessionId);
+      startFinalAnswerStage(io, payload.sessionId);
+    }
+  });
+
+  socket.on('player:finalAnswer', (payload) => {
+    const session = getSession(payload.sessionId);
+    if (!session || session.phase !== 'final_answer') return;
+
+    const player = session.players[socket.id];
+    const wager = session.finalChallengeWagers[socket.id];
+    if (!player || !wager || wager.answer) return;
+
+    const answer = sanitizeAnswer(payload.answer);
+    const updatedWagers = {
+      ...session.finalChallengeWagers,
+      [socket.id]: { ...wager, answer },
+    };
+
+    updateSession(payload.sessionId, { finalChallengeWagers: updatedWagers });
+
+    const totalPlayers = Object.keys(session.players).length;
+    const totalSubmitted = Object.values(updatedWagers).filter((entry) => entry.answer).length;
+
+    io.to(`session:${payload.sessionId}`).emit('final:answerConfirmed', {
+      playerId: socket.id,
+      playerName: player.name,
+      totalSubmitted,
+      totalPlayers,
+    });
+
+    io.to(`host:${payload.sessionId}`).emit('final:hostWagerReceived', {
+      playerId: socket.id,
+      playerName: player.name,
+      amount: wager.amount,
       answer,
     });
 
-    // Se todos apostaram, mover para fase de revelação
     if (totalSubmitted >= totalPlayers) {
+      stopTimer(payload.sessionId);
       updateSession(payload.sessionId, { phase: 'final_reveal' });
+      io.to(`session:${payload.sessionId}`).emit('final:phaseChanged', { phase: 'final_reveal' });
     }
   });
 
@@ -139,7 +211,7 @@ export function registerFinalHandlers(
       playerId: payload.playerId,
       playerName: player.name,
       wager: wager.amount,
-      answer: wager.answer,
+      answer: wager.answer ?? '',
       isCorrect: payload.isCorrect,
       oldScore,
       newScore,
@@ -151,6 +223,7 @@ export function registerFinalHandlers(
 
     const allRevealed = Object.values(updatedWagers).every((w) => w.revealed);
     if (allRevealed) {
+      stopTimer(payload.sessionId);
       const players = Object.values(updatedPlayers).sort((a, b) => b.score - a.score);
       updateSession(payload.sessionId, { phase: 'game_over', endedAt: Date.now() });
       io.to(`session:${payload.sessionId}`).emit('game:over', {

@@ -102,6 +102,19 @@ describe('host:selectQuestion', () => {
     expect(io.emitted.some((e) => e.event === 'double:started')).toBe(true);
   });
 
+  it('seleciona questão speed_round e transita para speed_round', () => {
+    const { socket, io } = setup();
+    socket.trigger('host:selectQuestion', {
+      sessionId: TEST_SESSION_ID,
+      hostToken: HOST_TOKEN,
+      categoryId: 'cat-1',
+      questionId: 'q-5',
+    });
+    expect(getSession(TEST_SESSION_ID)?.phase).toBe('speed_round');
+    expect(getSession(TEST_SESSION_ID)?.activeQuestion?.speedRoundCorrect).toEqual([]);
+    expect(io.emitted.some((e) => e.event === 'question:selected')).toBe(true);
+  });
+
   it('emite erro para questão já usada', () => {
     const { socket } = setup();
     socket.trigger('host:selectQuestion', {

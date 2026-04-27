@@ -13,7 +13,7 @@ const QuestionSchema = z.object({
   value: z.number().int().positive(),
   clue: z.string().min(1).max(2000),
   answer: z.string().min(1).max(500),
-  type: z.enum(['standard', 'all_play', 'challenge', 'double']),
+  type: z.enum(['standard', 'all_play', 'challenge', 'double', 'speed_round']),
   media: MediaAssetSchema.optional(),
   clueAudio: MediaAssetSchema.optional(),
   answerMedia: MediaAssetSchema.optional(),
@@ -39,6 +39,8 @@ const GameConfigSchema = z.object({
   finalChallengeClue: z.string().max(2000),
   finalChallengeAnswer: z.string().max(500),
   finalChallengeMedia: MediaAssetSchema.optional(),
+  finalChallengeWagerSeconds: z.number().int().min(10).max(300).optional(),
+  finalChallengeAnswerSeconds: z.number().int().min(10).max(300).optional(),
 });
 
 // GET /api/games — listar jogos

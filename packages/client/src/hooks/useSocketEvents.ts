@@ -81,6 +81,15 @@ export function useSocketEvents() {
       store.setFinalChallenge(clue, media);
     });
 
+    socket.on('final:answerStarted', () => {
+      store.setPhase('final_answer');
+    });
+
+    socket.on('final:phaseChanged', ({ phase }) => {
+      store.setPhase(phase);
+      store.setTimer(null);
+    });
+
     // Somente o host recebe este evento (server emite para host:sessionId)
     socket.on('final:hostDetails', ({ correctAnswer }) => {
       store.setFinalCorrectAnswer(correctAnswer);
@@ -89,10 +98,10 @@ export function useSocketEvents() {
     // Quando alguém aposta — todos recebem (sem valores)
     socket.on('final:wagerConfirmed', ({ playerId, playerName, totalSubmitted, totalPlayers }) => {
       store.addWagerSubmitted(playerId, playerName);
-      // Se todos apostaram, transitar para fase de revelação
-      if (totalSubmitted >= totalPlayers && totalPlayers > 0) {
-        store.setPhase('final_reveal');
-      }
+    });
+
+    socket.on('final:answerConfirmed', ({ playerId, playerName }) => {
+      store.addAnswerSubmitted(playerId, playerName);
     });
 
     // Somente o host recebe os detalhes da aposta
@@ -112,6 +121,7 @@ export function useSocketEvents() {
     socket.on('game:over', ({ finalScores }) => {
       store.setPlayers(finalScores);
       store.setPhase('game_over');
+      store.setTimer(null);
     });
 
     socket.on('double:started', ({ assignedPlayerId, assignedPlayerName }) => {
@@ -128,6 +138,14 @@ export function useSocketEvents() {
 
     socket.on('challenge:assigned', ({ challengeState }) => {
       store.setChallengeState(challengeState);
+    });
+
+    socket.on('speed:answered', ({ correct, phase }) => {
+      const current = useGameStore.getState().activeQuestion;
+      if (current) {
+        store.setActiveQuestion({ ...current, speedRoundCorrect: correct });
+      }
+      store.setPhase(phase);
     });
 
     socket.on('error', ({ code, message }) => {
@@ -149,14 +167,18 @@ export function useSocketEvents() {
       socket.off('score:update');
       socket.off('timer:update');
       socket.off('final:started');
+      socket.off('final:answerStarted');
+      socket.off('final:phaseChanged');
       socket.off('final:hostDetails');
       socket.off('final:wagerConfirmed');
+      socket.off('final:answerConfirmed');
       socket.off('final:hostWagerReceived');
       socket.off('final:revealed');
       socket.off('game:over');
       socket.off('double:started');
       socket.off('double:wagerLocked');
       socket.off('challenge:assigned');
+      socket.off('speed:answered');
       socket.off('error');
       // Não desconecta — conexão persiste durante toda a sessão de jogo
     };
